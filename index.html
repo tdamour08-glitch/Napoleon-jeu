@@ -58,6 +58,7 @@
 
     <div class="bandeau-outils">
       <button id="btn-economie" class="bouton-outil" title="Trésor et marché (E)">Économie</button>
+      <button id="btn-diplomatie" class="bouton-outil" title="Cabinet diplomatique (D)">Diplomatie</button>
       <button id="btn-guide" class="bouton-outil" title="Comment jouer (H)">Guide</button>
     </div>
 
@@ -81,6 +82,9 @@
     <div id="liste-puissances"></div>
   </aside>
 
+  <!-- Cabinet diplomatique -->
+  <aside id="panneau-diplomatie" class="panneau panneau-diplomatie cache"></aside>
+
   <!-- Corps d'armée sélectionné -->
   <aside id="panneau-armee" class="panneau panneau-armee cache"></aside>
 
@@ -94,7 +98,7 @@
   <div id="voile-pause" class="voile-pause">PAUSE</div>
 
   <div id="aide-controles" class="aide-controles">
-    Glisser : déplacer &middot; Molette : zoom &middot; Espace : pause &middot; 1/2/3 : vitesse &middot; C : recentrer &middot; H : guide<br>Clic : sélectionner &middot; Clic droit : ordre de marche &middot; Maj + clic droit : détacher la moitié
+    Glisser ou flèches : déplacer &middot; Molette : zoom &middot; Espace : pause &middot; 1/2/3 : vitesse &middot; C : recentrer &middot; H : guide &middot; D : diplomatie<br>Clic : sélectionner &middot; Clic droit : ordre de marche &middot; Maj + clic droit : détacher la moitié
   </div>
 </div>
 
@@ -123,7 +127,7 @@
       <section>
         <h3>2. Se déplacer</h3>
         <ul>
-          <li><strong>Glisser</strong> la souris, ou les <strong>flèches</strong> / <strong>WASD</strong>, pour parcourir la carte.</li>
+          <li><strong>Glisser</strong> la souris, ou les <strong>flèches</strong>, pour parcourir la carte.</li>
           <li><strong>Molette</strong> pour zoomer.</li>
           <li><strong>Clic</strong> sur une province pour l'inspecter, <strong>Échap</strong> pour refermer.</li>
           <li><strong>C</strong> pour revenir à votre capitale.</li>
@@ -220,7 +224,27 @@
       </section>
 
       <section>
-        <h3>9. Occuper n'est pas annexer</h3>
+        <h3>9. Le cabinet diplomatique</h3>
+        <p>
+          Le bouton <strong>Diplomatie</strong> ouvre le registre des puissances&nbsp;:
+          leur relation avec vous, et l'<strong>estime</strong> qu'elles vous portent,
+          de −100 à +100. Vous pouvez leur proposer une <strong>alliance</strong>,
+          demander un <strong>armistice</strong>, rompre un pacte ou déclarer la guerre.
+        </p>
+        <p>
+          Les cabinets rivaux jouent pour gagner&nbsp;: ils dévorent les voisins trop
+          faibles, s'allient à qui partage leurs ennemis, et se liguent contre celle des
+          puissances qui menace de dominer l'Europe. Si c'est vous qui prenez cette
+          avance, attendez-vous à voir se former une <strong>coalition</strong>.
+        </p>
+        <p class="note">
+          Un allié qui entre en guerre vous y appelle — mais seulement si la querelle
+          vous concerne, c'est-à-dire si vous touchez l'un des belligérants.
+        </p>
+      </section>
+
+      <section>
+        <h3>10. Occuper n'est pas annexer</h3>
         <p>
           Une province tenue douze jours sans opposition passe sous votre
           <strong>occupation</strong>&nbsp;: elle vous rapporte, mais moitié moins, paie
@@ -231,7 +255,7 @@
       </section>
 
       <section>
-        <h3>10. Le moral civil</h3>
+        <h3>11. Le moral civil</h3>
         <p>
           Chaque province a un moral qui monte avec le développement et tombe avec les
           pénuries, l'éloignement colonial et l'occupation militaire. Une population
@@ -240,11 +264,16 @@
       </section>
 
       <section>
-        <h3>11. Ce qui vient ensuite</h3>
+        <h3>12. Ce qui vient ensuite</h3>
         <ul>
-          <li><strong>Phase 4</strong>&nbsp;: les cabinets rivaux jouent pour gagner, déclarent leurs guerres et se coalisent.</li>
-          <li><strong>Phase 5</strong>&nbsp;: négociations, traités de paix, annexions et redditions.</li>
+          <li><strong>Phase 5</strong>&nbsp;: traités de paix qui cèdent les provinces occupées,
+              annexions, redditions et conditions de victoire.</li>
+          <li><strong>Phase 6</strong>&nbsp;: équilibrage, sauvegarde, finitions.</li>
         </ul>
+        <p class="note">
+          Pour l'instant un armistice arrête les combats mais laisse les occupations en
+          place&nbsp;: aucune province ne change encore de souverain de droit.
+        </p>
       </section>
     </div>
 

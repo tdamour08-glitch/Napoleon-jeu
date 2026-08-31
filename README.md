@@ -17,7 +17,7 @@ python3 -m http.server 8000
 
 | Action | Commande |
 |---|---|
-| Déplacer la carte | glisser à la souris, flèches, ou ZQSD/WASD |
+| Déplacer la carte | glisser à la souris, ou les flèches |
 | Zoom | molette |
 | Pause / reprise | `Espace` ou le bouton `II` |
 | Vitesse x1 / x2 / x4 | `1`, `2`, `3` ou les boutons du bandeau |
@@ -28,6 +28,7 @@ python3 -m http.server 8000
 | Ordre de marche | **clic droit** sur une province |
 | Détacher la moitié d'un corps | **Maj + clic droit** |
 | Trésor et marché | `E` ou le bouton **Économie** |
+| Cabinet diplomatique | `D` ou le bouton **Diplomatie** |
 | Guide « comment jouer » | `H` ou le bouton **Guide** |
 
 Le guide s'ouvre au premier lancement et met le jeu en pause. Une case à cocher
@@ -42,10 +43,11 @@ permet de ne plus l'afficher au démarrage&nbsp;; il reste accessible par `H`.
       et un guide de jeu intégré.
 - [x] **Phase 3 — Armées** : levée de troupes, marches en temps réel, batailles,
       jauge de motivation, occupation militaire, déclarations de guerre.
-- [ ] **Phase 4 — Intelligence artificielle** : les puissances non jouées cherchent
-      à l'emporter, s'étendent et se coalisent.
-- [ ] **Phase 5 — Diplomatie et victoire** : alliances, occupation puis annexion par
-      traité de paix ou élimination totale, reddition.
+- [x] **Phase 4 — Intelligence artificielle** : les cabinets rivaux évaluent le
+      rapport de forces, dévorent les voisins faibles, nouent des alliances,
+      se liguent contre l'hégémon et savent demander un armistice.
+- [ ] **Phase 5 — Traités et victoire** : négociations qui cèdent les provinces
+      occupées, annexion, reddition, élimination totale.
 - [ ] **Phase 6 — Finitions** : équilibrage, sauvegarde, aide en jeu.
 
 ## Architecture
@@ -63,6 +65,7 @@ js/core/armees.js     levées, marches, entretien, motivation
 js/core/combat.js     batailles, déroutes, occupation, insurrections
 js/core/diplomatie.js paix et guerre
 js/core/ia_militaire.js conduite des armées non jouées
+js/core/ia_strategie.js décisions des cabinets : alliances, guerres, armistices
 js/core/tour.js       ordre des systèmes dans une journée
 js/data/langue.js     articles et élisions (« aux États-Unis », « d'Île-de-France »)
 js/core/moteur.js     boucle temps réel avec pause et vitesses
@@ -141,3 +144,36 @@ Chaque puissance porte une **doctrine** — élan au combat, ténacité sous le 
 motivation après une victoire, discipline défensive, vitesse de marche. Ces valeurs ne
 sont affichées nulle part et ne le seront pas&nbsp;: elles se lisent aux résultats. Les
 troupes napoléoniennes ont, de ce fait, un avantage que le joueur doit deviner.
+
+### Comment décident les cabinets rivaux
+
+Tous les quinze jours, chaque puissance non jouée évalue le rapport de forces — terres,
+population, développement, armées, trésor — puis révise l'**opinion** qu'elle porte à
+chacune des autres, de −100 à +100. Cette opinion tient compte du voisinage, des ennemis
+communs, des provinces occupées, et surtout de l'**hégémonie**.
+
+Une puissance fait figure d'hégémon lorsqu'elle dépasse la deuxième de moitié. Un seuil
+en part du total ne conviendrait pas&nbsp;: avec vingt-six puissances, celle qui domine
+l'Europe ne pèse jamais qu'un sixième du monde. Dès qu'un hégémon se détache, ceux qu'il
+menace le détestent et se rapprochent entre eux — c'est ainsi que naissent les
+**coalitions**, y compris contre le joueur.
+
+Sur cette base, chaque cabinet choisit&nbsp;:
+
+- **la guerre**, contre un voisin nettement plus faible ou franchement détesté, à
+  condition d'avoir l'avantage. Contre l'hégémon, il accepte un risque qu'il ne prendrait
+  pas ailleurs, et compte comme renfort ceux qui le combattent déjà&nbsp;;
+- **l'alliance**, avec un voisin ou un compagnon d'armes de confiance, jamais avec qui
+  traîne plus de guerres qu'on n'en peut porter&nbsp;;
+- **l'armistice**, quand la guerre dure depuis deux cents jours et que la lassitude —
+  armées fondues, caisses vides, provinces perdues — l'emporte, l'adversaire étant lui
+  aussi à bout ou déjà satisfait de ses gains.
+
+Un allié entrant en guerre appelle les siens, mais seuls répondent ceux que la querelle
+concerne, c'est-à-dire ceux qui touchent l'un des belligérants. Sans cette réserve, une
+escarmouche entre deux principautés allemandes mettait la Perse en guerre contre les
+États-Unis.
+
+Les propositions faites au joueur arrivent dans son **cabinet diplomatique** (`D`), qui
+sert aussi à proposer, rompre et déclarer. Un armistice arrête les combats mais laisse
+les occupations en place&nbsp;: la cession des provinces demandera un traité, en phase 5.

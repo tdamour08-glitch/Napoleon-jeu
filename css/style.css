@@ -507,3 +507,66 @@ html, body {
   color: #f0b3a6; background: rgba(180,60,45,.2);
   border: 1px solid rgba(200,80,60,.5); border-radius: 3px;
 }
+
+/* ------------------------------------------------------------
+   Phase 4 — cabinet diplomatique
+   ------------------------------------------------------------ */
+
+.panneau-diplomatie {
+  left: 10px; top: 82px;
+  width: 344px;
+  padding: 14px 16px 16px;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+}
+.panneau-diplomatie h2 { margin: 0 0 12px; font-size: 18px; color: var(--or-clair); }
+
+.offre {
+  margin-bottom: 10px; padding: 10px 12px;
+  background: rgba(201,162,39,.1);
+  border: 1px solid rgba(201,162,39,.45);
+  border-radius: 4px;
+}
+.offre p { margin: 0 0 8px; font-size: 12.5px; line-height: 1.5; }
+.offre .actions { display: flex; gap: 6px; }
+
+.ligne-relation {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 4px; font-size: 12.5px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.ligne-relation .pastille { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 auto; }
+.ligne-relation .nom { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.ligne-relation .nom:hover { color: var(--or-clair); }
+.ligne-relation .estime { font-variant-numeric: tabular-nums; width: 34px; text-align: right; }
+
+.badge {
+  font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+}
+.badge.paix { color: var(--texte-doux); background: rgba(255,255,255,.06); }
+.badge.guerre { color: #f0b3a6; background: rgba(180,60,45,.25); }
+.badge.alliance { color: #a8d8b4; background: rgba(60,150,90,.22); }
+.badge.hegemon { color: #14161f; background: var(--or); }
+
+.actions-relation { display: flex; gap: 4px; margin: 2px 0 8px 18px; }
+.bouton-mini {
+  font-family: inherit; font-size: 11px;
+  padding: 3px 8px;
+  color: var(--texte-doux);
+  background: var(--nuit-3); border: 1px solid var(--bordure); border-radius: 3px;
+  cursor: pointer;
+}
+.bouton-mini:hover:not(:disabled) { color: var(--texte); border-color: var(--or); }
+.bouton-mini:disabled { opacity: .3; cursor: not-allowed; }
+.bouton-mini.danger { color: #f0b3a6; border-color: rgba(200,80,60,.5); }
+
+.reponse-diplomatique {
+  margin: 8px 0 0; padding: 8px 10px;
+  font-size: 12px; font-style: italic;
+  color: var(--texte-doux);
+  background: rgba(255,255,255,.04);
+  border-left: 2px solid var(--bordure);
+}
+.reponse-diplomatique.oui { border-left-color: var(--vert); }
+.reponse-diplomatique.non { border-left-color: #b6432f; }

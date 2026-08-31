@@ -11,6 +11,9 @@ const COULEUR_TERRE_NEUTRE = '#3b4152';
 const COULEUR_FRONTIERE = 'rgba(10, 14, 22, 0.55)';
 const COULEUR_COTE = 'rgba(200, 220, 255, 0.18)';
 
+/** Les pions se dessinent au-dessus du centre pour ne pas masquer le nom. */
+export const DECALAGE_PION = -13;
+
 export class Rendu {
   /**
    * @param {HTMLCanvasElement} canvas
@@ -138,7 +141,7 @@ export class Rendu {
       const cle = armee.route ? armee.id : armee.lieu;
       const rang = parLieu.get(cle) ?? 0;
       parLieu.set(cle, rang + 1);
-      pions.push({ armee, x, y: y - 13 + rang * 17 });
+      pions.push({ armee, x, y: y + DECALAGE_PION + rang * 17 });
     }
     return pions;
   }
@@ -245,9 +248,11 @@ export class Rendu {
     // On teste du dernier au premier : le pion dessiné au-dessus gagne.
     for (let i = pions.length - 1; i >= 0; i--) {
       const { armee, x, y } = pions[i];
+      // Zone de préhension un peu plus large que le pion : les corps se
+      // chevauchent et un clic au pixel près serait pénible.
       const compact = this.camera.zoom < 1.1;
-      const dx = compact ? 12 : 17;
-      const dy = compact ? 8 : 11;
+      const dx = compact ? 13 : 18;
+      const dy = compact ? 10 : 14;
       if (Math.abs(px - x) <= dx && Math.abs(py - y) <= dy) return armee.id;
     }
     return null;

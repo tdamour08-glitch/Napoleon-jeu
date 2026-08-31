@@ -10,6 +10,7 @@ import { appliquerJourEconomie, gererEconomieBots, recalculerEconomie } from './
 import { appliquerJourMilitaire } from './armees.js';
 import { appliquerJourCombat } from './combat.js';
 import { conduireArmeesBots } from './ia_militaire.js';
+import { conduireDiplomatieBots, suivreGuerres, expirerOffres } from './ia_strategie.js';
 
 export function jouerUnJour(etat) {
   avancerJour(etat);
@@ -23,7 +24,10 @@ export function jouerUnJour(etat) {
   // 3. Batailles, déroutes, occupations.
   appliquerJourCombat(etat);
 
-  // 4. Décisions des puissances non jouées.
+  // 4. Décisions des puissances non jouées : cabinet, puis état-major.
+  suivreGuerres(etat);
+  expirerOffres(etat);
+  conduireDiplomatieBots(etat);
   gererEconomieBots(etat);
   conduireArmeesBots(etat);
 

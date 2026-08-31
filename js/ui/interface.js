@@ -5,7 +5,14 @@
 import { RESSOURCES, TERRAINS } from '../data/empires.js';
 import { datif } from '../data/langue.js';
 import { controleur, dateEnTexte } from '../core/etat.js';
-import { sontEnGuerre } from '../core/diplomatie.js';
+import {
+  sontEnGuerre,
+  sontAllies,
+  relation,
+  opinion,
+  GUERRE,
+  ALLIANCE,
+} from '../core/diplomatie.js';
 import {
   armeesDans,
   verifierLevee,
@@ -54,6 +61,9 @@ export class Interface {
       reserves: document.getElementById('valeur-reserves'),
       panneauEconomie: document.getElementById('panneau-economie'),
       boutonEconomie: document.getElementById('btn-economie'),
+      panneauDiplomatie: document.getElementById('panneau-diplomatie'),
+      boutonDiplomatie: document.getElementById('btn-diplomatie'),
+      panneauPuissances: document.getElementById('panneau-puissances'),
       listePuissances: document.getElementById('liste-puissances'),
       journal: document.getElementById('journal'),
     };
@@ -62,9 +72,14 @@ export class Interface {
     this.signatureTerritoire = null;
     this.signatureEconomie = null;
     this.signatureArmee = null;
+    this.signatureDiplomatie = null;
+    // Panneau occupant la colonne de gauche : null, 'economie' ou 'diplomatie'.
+    this.panneauLateral = null;
+    this.reponseDiplomatique = null;
     this.initialiserBandeau();
 
-    this.el.boutonEconomie.addEventListener('click', () => this.basculerEconomie());
+    this.el.boutonEconomie.addEventListener('click', () => this.basculerLateral('economie'));
+    this.el.boutonDiplomatie.addEventListener('click', () => this.basculerLateral('diplomatie'));
     this.brancherPanneaux();
   }
 
@@ -98,6 +113,32 @@ export class Interface {
       if (!cible || cible.disabled) return;
       if (cible.dataset.action === 'fermer') this.actions.selectionnerArmee(null);
       if (cible.dataset.action === 'halte') this.actions.faireHalte(this.etat.selectionArmee);
+    });
+
+    this.el.panneauDiplomatie.addEventListener('click', (ev) => {
+      const cible = ev.target.closest('[data-action]');
+      if (!cible || cible.disabled) return;
+      const idEmpire = cible.dataset.empire;
+      switch (cible.dataset.action) {
+        case 'fermer':
+          return this.basculerLateral('diplomatie');
+        case 'voir':
+          return this.actions.centrerSurEmpire(idEmpire);
+        case 'alliance':
+          return this.actions.proposerAlliance(idEmpire);
+        case 'armistice':
+          return this.actions.proposerArmistice(idEmpire);
+        case 'rompre':
+          return this.actions.rompreAlliance(idEmpire);
+        case 'guerre':
+          return this.actions.declarerGuerre(idEmpire);
+        case 'accepter':
+          return this.actions.repondreOffre(idEmpire, cible.dataset.type, true);
+        case 'refuser':
+          return this.actions.repondreOffre(idEmpire, cible.dataset.type, false);
+        default:
+          return undefined;
+      }
     });
 
     this.el.panneauEconomie.addEventListener('click', (ev) => {
@@ -171,7 +212,8 @@ export class Interface {
     this.rafraichirJournal();
     this.rafraichirTerritoire();
     this.rafraichirArmee();
-    if (!this.el.panneauEconomie.classList.contains('cache')) this.rafraichirEconomie();
+    if (this.panneauLateral === 'economie') this.rafraichirEconomie();
+    if (this.panneauLateral === 'diplomatie') this.rafraichirDiplomatie();
   }
 
   rafraichirPuissances() {
@@ -180,7 +222,8 @@ export class Interface {
       .filter((e) => e.vivant)
       .sort((a, b) => b.territoires.length - a.territoires.length);
 
-    const signature = classement.map((e) => `${e.id}:${e.territoires.length}`).join('|');
+    const hegemon = etat.equilibre?.hegemon ?? null;
+    const signature = classement.map((e) => `${e.id}:${e.territoires.length}`).join('|') + `#${hegemon}`;
     if (signature === this.signaturePuissances) return;
     this.signaturePuissances = signature;
 
@@ -190,6 +233,7 @@ export class Interface {
         <div class="ligne-puissance ${e.id === etat.joueur ? 'joueur' : ''}" data-empire="${e.id}">
           <span class="pastille" style="background:${e.couleur}"></span>
           <span class="nom">${e.nom}</span>
+          ${e.id === hegemon ? '<span class="badge hegemon" title="Domine l\'Europe">★</span>' : ''}
           <span class="compte">${e.territoires.length}</span>
         </div>`,
       )
@@ -399,6 +443,99 @@ export class Interface {
   }
 
   /* ----------------------------------------------------------
+     Cabinet diplomatique
+     ---------------------------------------------------------- */
+
+  rafraichirDiplomatie() {
+    const etat = this.etat;
+    const moi = etat.joueur;
+    const puissances = Object.values(etat.empires)
+      .filter((e) => e.vivant && e.id !== moi)
+      .sort((a, b) => b.territoires.length - a.territoires.length);
+
+    const offres = [
+      ...Object.entries(etat.offresAlliance).map(([cle, o]) => ({ cle, ...o, type: 'alliance' })),
+      ...Object.entries(etat.offresArmistice).map(([cle, o]) => ({ cle, ...o, type: 'armistice' })),
+    ].filter((o) => o.cle.split('|').includes(moi));
+
+    const signature = [
+      offres.map((o) => `${o.type}:${o.demandeur}`).join(','),
+      puissances
+        .map((e) => `${e.id}:${relation(etat, moi, e.id)}:${Math.round(opinion(etat, e.id, moi) / 5)}`)
+        .join('|'),
+      etat.equilibre?.hegemon ?? '-',
+      this.reponseDiplomatique?.texte ?? '',
+    ].join('#');
+    if (signature === this.signatureDiplomatie) return;
+    this.signatureDiplomatie = signature;
+
+    const blocsOffres = offres
+      .map((offre) => {
+        const demandeur = etat.empires[offre.demandeur];
+        const libelle =
+          offre.type === 'alliance'
+            ? `<strong>${demandeur.nom}</strong> vous propose une alliance.`
+            : `<strong>${demandeur.nom}</strong> demande un armistice.`;
+        return `
+          <div class="offre">
+            <p>${libelle}</p>
+            <div class="actions">
+              <button class="bouton-mini" data-action="accepter" data-type="${offre.type}" data-empire="${offre.demandeur}">Accepter</button>
+              <button class="bouton-mini danger" data-action="refuser" data-type="${offre.type}" data-empire="${offre.demandeur}">Refuser</button>
+            </div>
+          </div>`;
+      })
+      .join('');
+
+    const hegemon = etat.equilibre?.hegemon ?? null;
+    const lignes = puissances
+      .map((e) => {
+        const etatRelation = relation(etat, moi, e.id);
+        const estime = Math.round(opinion(etat, e.id, moi));
+        const enGuerre = etatRelation === GUERRE;
+        const allie = etatRelation === ALLIANCE;
+        return `
+          <div class="ligne-relation">
+            <span class="pastille" style="background:${e.couleur}"></span>
+            <span class="nom" data-action="voir" data-empire="${e.id}">${e.nom}</span>
+            ${e.id === hegemon ? '<span class="badge hegemon" title="Domine l\'Europe">★</span>' : ''}
+            <span class="badge ${etatRelation}">${etatRelation}</span>
+            <span class="estime" style="color:${couleurEstime(estime)}" title="Estime qu'elle vous porte">${estime > 0 ? '+' : ''}${estime}</span>
+          </div>
+          <div class="actions-relation">
+            ${
+              enGuerre
+                ? `<button class="bouton-mini" data-action="armistice" data-empire="${e.id}">Demander un armistice</button>`
+                : allie
+                  ? `<button class="bouton-mini danger" data-action="rompre" data-empire="${e.id}">Rompre l'alliance</button>
+                     <button class="bouton-mini danger" data-action="guerre" data-empire="${e.id}">Déclarer la guerre</button>`
+                  : `<button class="bouton-mini" data-action="alliance" data-empire="${e.id}">Proposer une alliance</button>
+                     <button class="bouton-mini danger" data-action="guerre" data-empire="${e.id}">Déclarer la guerre</button>`
+            }
+          </div>`;
+      })
+      .join('');
+
+    const reponse = this.reponseDiplomatique
+      ? `<p class="reponse-diplomatique ${this.reponseDiplomatique.accepte ? 'oui' : 'non'}">${this.reponseDiplomatique.texte}</p>`
+      : '';
+
+    this.el.panneauDiplomatie.innerHTML = `
+      <button class="fermer-panneau" data-action="fermer" title="Fermer">×</button>
+      <h2>Cabinet diplomatique</h2>
+      ${blocsOffres}
+      ${reponse}
+      <div class="bloc"><h3>Puissances</h3>${lignes}</div>`;
+  }
+
+  /** Affiche la réponse d'un cabinet étranger jusqu'à la prochaine démarche. */
+  annoncerReponse(texte, accepte) {
+    this.reponseDiplomatique = { texte, accepte };
+    this.signatureDiplomatie = null;
+    this.rafraichirDiplomatie();
+  }
+
+  /* ----------------------------------------------------------
      Panneau du corps sélectionné
      ---------------------------------------------------------- */
 
@@ -407,6 +544,10 @@ export class Interface {
     if (!armee) {
       if (this.signatureArmee !== null) {
         this.signatureArmee = null;
+    this.signatureDiplomatie = null;
+    // Panneau occupant la colonne de gauche : null, 'economie' ou 'diplomatie'.
+    this.panneauLateral = null;
+    this.reponseDiplomatique = null;
         this.el.panneauArmee.classList.add('cache');
       }
       return;
@@ -525,13 +666,30 @@ export class Interface {
      Panneau économie et marché
      ---------------------------------------------------------- */
 
-  basculerEconomie() {
-    const cache = this.el.panneauEconomie.classList.toggle('cache');
-    this.el.boutonEconomie.classList.toggle('actif', !cache);
-    // Les deux panneaux occupent la même colonne : on les alterne.
-    document.getElementById('panneau-puissances').classList.toggle('cache', !cache);
+  /**
+   * Liste des puissances, trésor et cabinet occupent la même colonne :
+   * on n'en montre qu'un à la fois.
+   */
+  basculerLateral(nom) {
+    this.panneauLateral = this.panneauLateral === nom ? null : nom;
+    this.el.panneauEconomie.classList.toggle('cache', this.panneauLateral !== 'economie');
+    this.el.panneauDiplomatie.classList.toggle('cache', this.panneauLateral !== 'diplomatie');
+    this.el.panneauPuissances.classList.toggle('cache', this.panneauLateral !== null);
+    this.el.boutonEconomie.classList.toggle('actif', this.panneauLateral === 'economie');
+    this.el.boutonDiplomatie.classList.toggle('actif', this.panneauLateral === 'diplomatie');
     this.signatureEconomie = null;
-    if (!cache) this.rafraichirEconomie();
+    this.signatureDiplomatie = null;
+    if (this.panneauLateral === 'economie') this.rafraichirEconomie();
+    if (this.panneauLateral === 'diplomatie') this.rafraichirDiplomatie();
+  }
+
+  /** Conservé pour le raccourci clavier historique. */
+  basculerEconomie() {
+    this.basculerLateral('economie');
+  }
+
+  basculerDiplomatie() {
+    this.basculerLateral('diplomatie');
   }
 
   rafraichirEconomie() {
@@ -597,6 +755,12 @@ export class Interface {
       </div>`;
 
   }
+}
+
+function couleurEstime(valeur) {
+  if (valeur >= 30) return 'var(--vert)';
+  if (valeur <= -30) return '#e07b6a';
+  return 'var(--texte-doux)';
 }
 
 function couleurMoral(moral) {

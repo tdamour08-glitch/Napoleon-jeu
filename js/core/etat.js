@@ -38,6 +38,9 @@ const FORCES_INITIALES = {
 /** Guerres déjà engagées au 1er mars 1805. */
 const GUERRES_INITIALES = [['fra', 'gbr']];
 
+/** Alliances déjà signées : Londres et Saint-Pétersbourg, avril 1805. */
+const ALLIANCES_INITIALES = [['gbr', 'rus']];
+
 const parRessource = (valeur) => Object.fromEntries(RESSOURCES.map((r) => [r.id, valeur]));
 
 /**
@@ -64,6 +67,9 @@ export function creerPartie(idEmpireJoueur) {
       // Réserves d'hommes mobilisables, en milliers.
       reserves: 0,
       reservesMax: 0,
+      // Provinces possédées en droit, occupation comprise. Distinct de
+      // `territoires`, qui ne compte que celles effectivement tenues.
+      souverainete: 0,
       moral: (modele.doctrine ?? DOCTRINE_DEFAUT).moralInitial ?? DOCTRINE_DEFAUT.moralInitial,
     };
   }
@@ -106,6 +112,13 @@ export function creerPartie(idEmpireJoueur) {
     prochainIdArmee: 1,
     batailles: {},
     relations: {},
+    opinions: {},
+    // Offres en attente de réponse du joueur, et premier jour de chaque guerre.
+    offresAlliance: {},
+    offresArmistice: {},
+    debutsDeGuerre: {},
+    dernieresGuerres: {},
+    equilibre: null,
     economieARecalculer: false,
   };
 
@@ -138,6 +151,9 @@ function installerForcesInitiales(etat) {
 
   for (const [a, b] of GUERRES_INITIALES) {
     etat.relations[a < b ? `${a}|${b}` : `${b}|${a}`] = 'guerre';
+  }
+  for (const [a, b] of ALLIANCES_INITIALES) {
+    etat.relations[a < b ? `${a}|${b}` : `${b}|${a}`] = 'alliance';
   }
 }
 
@@ -174,14 +190,23 @@ export function estOccupe(territoire) {
 export function recenserTerritoires(etat) {
   for (const empire of Object.values(etat.empires)) {
     empire.territoires = [];
+    empire.souverainete = 0;
     empire.vivant = false;
   }
   for (const id of etat.carte.ordre) {
     const territoire = etat.carte.territoires[id];
     const empire = etat.empires[controleur(territoire)];
-    if (!empire) continue;
-    empire.territoires.push(id);
-    empire.vivant = true;
+    if (empire) {
+      empire.territoires.push(id);
+      empire.vivant = true;
+    }
+    // La souveraineté de droit survit à l'occupation : une puissance
+    // entièrement envahie existe encore tant qu'aucun traité ne l'a dépecée.
+    const souverain = etat.empires[territoire.maitre];
+    if (souverain) {
+      souverain.souverainete += 1;
+      souverain.vivant = true;
+    }
   }
 }
 

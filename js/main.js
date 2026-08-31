@@ -6,7 +6,13 @@ import { creerPartie, journaliser } from './core/etat.js';
 import { recalculerEconomie, initialiserReserves, lancerChantier, echanger } from './core/economie.js';
 import { jouerUnJour } from './core/tour.js';
 import { lancerLevee, ordonnerMarche, annulerMarche, detacher } from './core/armees.js';
-import { declarerGuerre } from './core/diplomatie.js';
+import {
+  declarerGuerre,
+  rompreAlliance,
+  conclureAlliance,
+  conclureArmistice,
+} from './core/diplomatie.js';
+import { repondreAlliance, repondreArmistice } from './core/ia_strategie.js';
 import { Moteur } from './core/moteur.js';
 import { Camera } from './render/camera.js';
 import { Rendu } from './render/rendu.js';
@@ -57,6 +63,37 @@ async function demarrer() {
     },
     declarerGuerre: (idCible) => {
       declarerGuerre(etat, etat.joueur, idCible);
+      recalculerEconomie(etat);
+    },
+    proposerAlliance: (idCible) => {
+      const reponse = repondreAlliance(etat, idCible, etat.joueur);
+      ui.annoncerReponse(reponse.motif, reponse.accepte);
+    },
+    proposerArmistice: (idCible) => {
+      const reponse = repondreArmistice(etat, idCible, etat.joueur);
+      ui.annoncerReponse(reponse.motif, reponse.accepte);
+    },
+    rompreAlliance: (idCible) => {
+      rompreAlliance(etat, etat.joueur, idCible);
+    },
+    repondreOffre: (idDemandeur, type, accepte) => {
+      const cle = [etat.joueur, idDemandeur].sort().join('|');
+      const registre = type === 'alliance' ? etat.offresAlliance : etat.offresArmistice;
+      delete registre[cle];
+      if (!accepte) {
+        ui.annoncerReponse('Vous déclinez la proposition.', false);
+        return;
+      }
+      if (type === 'alliance') conclureAlliance(etat, etat.joueur, idDemandeur);
+      else conclureArmistice(etat, etat.joueur, idDemandeur);
+      ui.annoncerReponse('Vous acceptez la proposition.', true);
+    },
+    centrerSurEmpire: (idEmpire) => {
+      const empire = etat.empires[idEmpire];
+      const capitale =
+        empire.territoires.map((id) => etat.carte.territoires[id]).find((t) => t.capitale) ??
+        etat.carte.territoires[empire.territoires[0]];
+      if (capitale) centrerSurTerritoire(capitale.id);
     },
     selectionnerArmee: (id) => {
       etat.selectionArmee = id;
@@ -215,6 +252,9 @@ function brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centr
       case 'KeyE':
         ui.basculerEconomie();
         break;
+      case 'KeyD':
+        ui.basculerDiplomatie();
+        break;
       case 'KeyH':
         guide.basculer();
         break;
@@ -235,7 +275,8 @@ function brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centr
     }
   });
 
-  // Déplacement au clavier, indépendant de la boucle de jeu.
+  // Déplacement au clavier : les flèches seules. Les lettres sont réservées
+  // aux commandes (E, D, H, C), qui entraient en conflit avec ZQSD/WASD.
   const touches = new Set();
   window.addEventListener('keydown', (ev) => touches.add(ev.code));
   window.addEventListener('keyup', (ev) => touches.delete(ev.code));
@@ -243,10 +284,10 @@ function brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centr
     const pas = 14;
     let dx = 0;
     let dy = 0;
-    if (touches.has('ArrowLeft') || touches.has('KeyA')) dx += pas;
-    if (touches.has('ArrowRight') || touches.has('KeyD')) dx -= pas;
-    if (touches.has('ArrowUp') || touches.has('KeyW')) dy += pas;
-    if (touches.has('ArrowDown') || touches.has('KeyS')) dy -= pas;
+    if (touches.has('ArrowLeft')) dx += pas;
+    if (touches.has('ArrowRight')) dx -= pas;
+    if (touches.has('ArrowUp')) dy += pas;
+    if (touches.has('ArrowDown')) dy -= pas;
     if (dx || dy) camera.deplacer(dx, dy);
     requestAnimationFrame(deplacementClavier);
   };

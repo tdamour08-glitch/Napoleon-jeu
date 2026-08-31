@@ -81,7 +81,7 @@ function avancerInsurrection(etat, territoire) {
     return;
   }
   const souverain = etat.empires[territoire.maitre];
-  if (!souverain?.vivant) {
+  if (!souverain || souverain.souverainete === 0) {
     territoire.insurrection = 0;
     return;
   }
