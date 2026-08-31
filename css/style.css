@@ -1,0 +1,297 @@
+/* ============================================================
+   Les Aigles — feuille de style
+   Thème : Empire (bleu nuit, or, parchemin)
+   ============================================================ */
+
+:root {
+  --or: #c9a227;
+  --or-clair: #e8cf7a;
+  --nuit: #10141f;
+  --nuit-2: #171c2b;
+  --nuit-3: #1f2536;
+  --bordure: #3a4157;
+  --texte: #e6e6ea;
+  --texte-doux: #a3aabb;
+  --mer: #16283f;
+  --rouge: #b6432f;
+  --vert: #4c9a5a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--nuit);
+  color: var(--texte);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ecran { position: fixed; inset: 0; }
+.cache { display: none !important; }
+
+/* ------------------------------------------------------------
+   Menu de sélection
+   ------------------------------------------------------------ */
+#ecran-menu { overflow-y: auto; }
+
+.menu-fond {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #26304a 0%, transparent 60%),
+    radial-gradient(900px 600px at 20% 110%, #1a2338 0%, transparent 55%),
+    linear-gradient(180deg, #131828 0%, #0c0f19 100%);
+}
+
+.menu-contenu {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+}
+
+.menu-entete { text-align: center; margin-bottom: 8px; }
+
+.menu-entete h1 {
+  margin: 0;
+  font-size: 56px;
+  letter-spacing: 14px;
+  color: var(--or-clair);
+  text-shadow: 0 2px 24px rgba(201,162,39,.35);
+}
+
+.sous-titre {
+  margin: 6px 0 0;
+  color: var(--texte-doux);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.menu-intro {
+  max-width: 720px;
+  margin: 28px auto 32px;
+  text-align: center;
+  color: var(--texte-doux);
+  line-height: 1.6;
+}
+
+.grille-empires {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.carte-empire {
+  position: relative;
+  text-align: left;
+  padding: 16px 16px 16px 20px;
+  background: linear-gradient(180deg, var(--nuit-3), var(--nuit-2));
+  border: 1px solid var(--bordure);
+  border-radius: 6px;
+  color: var(--texte);
+  cursor: pointer;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+  font-family: inherit;
+}
+.carte-empire::before {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 6px; border-radius: 6px 0 0 6px;
+  background: var(--couleur-empire, #888);
+}
+.carte-empire:hover { transform: translateY(-2px); border-color: var(--or); }
+.carte-empire.active {
+  border-color: var(--or);
+  box-shadow: 0 0 0 1px var(--or), 0 10px 30px rgba(0,0,0,.45);
+}
+.carte-empire h3 { margin: 0 0 4px; font-size: 19px; }
+.carte-empire .souverain { color: var(--or-clair); font-size: 12px; letter-spacing: 1px; }
+.carte-empire .resume { margin: 8px 0 0; font-size: 13px; color: var(--texte-doux); line-height: 1.45; }
+
+.menu-pied {
+  margin-top: 26px;
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.apercu-empire {
+  flex: 1 1 380px;
+  min-height: 118px;
+  padding: 16px 18px;
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--bordure);
+  border-radius: 6px;
+}
+.apercu-vide { color: var(--texte-doux); margin: 0; font-style: italic; }
+.apercu-empire h4 { margin: 0 0 8px; color: var(--or-clair); letter-spacing: 1px; }
+.apercu-empire ul { margin: 0; padding-left: 18px; color: var(--texte-doux); line-height: 1.6; font-size: 14px; }
+
+.bouton-principal {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 16px 30px;
+  font-family: inherit;
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #14161f;
+  background: linear-gradient(180deg, var(--or-clair), var(--or));
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.bouton-principal:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ------------------------------------------------------------
+   Jeu
+   ------------------------------------------------------------ */
+#carte { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+#carte.glisse { cursor: grabbing; }
+
+.panneau {
+  position: absolute;
+  background: rgba(16, 20, 31, .92);
+  border: 1px solid var(--bordure);
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+}
+
+/* Bandeau supérieur */
+#bandeau {
+  top: 10px; left: 10px; right: 10px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 0 16px;
+}
+
+.bandeau-empire { display: flex; align-items: center; gap: 10px; min-width: 210px; }
+.ecusson { width: 20px; height: 26px; border-radius: 3px 3px 8px 8px; display: inline-block; border: 1px solid rgba(255,255,255,.25); }
+.bandeau-titre { font-size: 17px; color: var(--or-clair); }
+.bandeau-sous { font-size: 12px; color: var(--texte-doux); }
+
+.bandeau-ressources { display: flex; gap: 16px; flex: 1; flex-wrap: wrap; }
+.ressource { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.ressource .pastille { width: 11px; height: 11px; border-radius: 2px; }
+.ressource .valeur { color: var(--texte); font-variant-numeric: tabular-nums; }
+.ressource .nom { color: var(--texte-doux); font-size: 12px; }
+
+.bandeau-temps { display: flex; align-items: center; gap: 14px; }
+.date-jeu { font-size: 15px; color: var(--or-clair); min-width: 140px; text-align: right; font-variant-numeric: tabular-nums; }
+.controles-temps { display: flex; gap: 5px; }
+
+.bouton-temps {
+  width: 34px; height: 30px;
+  font-family: inherit; font-size: 13px;
+  color: var(--texte-doux);
+  background: var(--nuit-3);
+  border: 1px solid var(--bordure);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.bouton-temps:hover { color: var(--texte); border-color: var(--or); }
+.bouton-temps.actif { color: #14161f; background: var(--or); border-color: var(--or); }
+
+/* Panneau latéral territoire */
+.panneau-lateral {
+  right: 10px; top: 82px;
+  width: 296px;
+  padding: 14px 16px 16px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+.panneau-lateral h2 { margin: 0 0 2px; font-size: 20px; color: var(--or-clair); padding-right: 22px; }
+.fermer-panneau {
+  position: absolute; top: 8px; right: 10px;
+  width: 22px; height: 22px; line-height: 1;
+  font-family: inherit; font-size: 16px;
+  color: var(--texte-doux); background: none; border: none; cursor: pointer;
+}
+.fermer-panneau:hover { color: var(--or-clair); }
+.panneau-lateral .ligne-proprietaire { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texte-doux); margin-bottom: 12px; }
+.panneau-lateral .ligne-proprietaire .pastille { width: 10px; height: 10px; border-radius: 2px; }
+
+.bloc { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--bordure); }
+.bloc h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--texte-doux); }
+
+.paire { display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0; }
+.paire span:last-child { color: var(--or-clair); font-variant-numeric: tabular-nums; }
+
+.gisements { display: flex; flex-direction: column; gap: 5px; }
+.gisement { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.gisement .pastille { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 auto; }
+.gisement .barre { flex: 1; height: 6px; background: rgba(255,255,255,.08); border-radius: 3px; overflow: hidden; }
+.gisement .barre i { display: block; height: 100%; }
+.gisement .etiquette { width: 62px; color: var(--texte-doux); }
+
+.liste-voisins { display: flex; flex-wrap: wrap; gap: 5px; }
+.puce-voisin {
+  font-size: 11.5px; padding: 3px 7px; border-radius: 3px;
+  background: var(--nuit-3); border: 1px solid var(--bordure);
+  color: var(--texte-doux); cursor: pointer;
+}
+.puce-voisin:hover { border-color: var(--or); color: var(--texte); }
+.puce-voisin.maritime { font-style: italic; }
+
+/* Panneau puissances */
+.panneau-puissances {
+  left: 10px; top: 82px;
+  width: 230px;
+  padding: 12px 14px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.panneau-puissances h2 { margin: 0 0 10px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--texte-doux); }
+.ligne-puissance {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 6px; border-radius: 3px; font-size: 13px; cursor: pointer;
+}
+.ligne-puissance:hover { background: rgba(255,255,255,.05); }
+.ligne-puissance.joueur { background: rgba(201,162,39,.12); }
+.ligne-puissance .pastille { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 auto; }
+.ligne-puissance .nom { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ligne-puissance .compte { color: var(--texte-doux); font-variant-numeric: tabular-nums; font-size: 12px; }
+
+/* Journal */
+.journal {
+  left: 10px; bottom: 10px;
+  width: 380px;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  color: var(--texte-doux);
+  line-height: 1.55;
+}
+.journal .entree { padding: 2px 0; }
+.journal .entree .horodatage { color: var(--or); margin-right: 6px; font-variant-numeric: tabular-nums; }
+
+/* Divers */
+.voile-pause {
+  position: absolute; top: 84px; left: 50%; transform: translateX(-50%);
+  padding: 5px 18px;
+  letter-spacing: 8px; font-size: 13px;
+  color: var(--or-clair);
+  background: rgba(16,20,31,.85);
+  border: 1px solid var(--or);
+  border-radius: 3px;
+  display: none;
+}
+.voile-pause.visible { display: block; }
+
+.aide-controles {
+  position: absolute; bottom: 12px; right: 12px;
+  font-size: 11.5px; color: var(--texte-doux);
+  background: rgba(16,20,31,.7);
+  padding: 5px 10px; border-radius: 3px;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #333c52; border-radius: 4px; }
