@@ -2,14 +2,11 @@
    main.js — assemblage et contrôles
    ============================================================ */
 
-import { creerPartie, journaliser, avancerJour } from './core/etat.js';
-import {
-  recalculerEconomie,
-  appliquerJourEconomie,
-  gererEconomieBots,
-  lancerChantier,
-  echanger,
-} from './core/economie.js';
+import { creerPartie, journaliser } from './core/etat.js';
+import { recalculerEconomie, initialiserReserves, lancerChantier, echanger } from './core/economie.js';
+import { jouerUnJour } from './core/tour.js';
+import { lancerLevee, ordonnerMarche, annulerMarche, detacher } from './core/armees.js';
+import { declarerGuerre } from './core/diplomatie.js';
 import { Moteur } from './core/moteur.js';
 import { Camera } from './render/camera.js';
 import { Rendu } from './render/rendu.js';
@@ -25,6 +22,7 @@ async function demarrer() {
 
   const etat = creerPartie(idEmpire);
   recalculerEconomie(etat);
+  initialiserReserves(etat);
 
   const canvas = document.getElementById('carte');
   const camera = new Camera(etat.carte.bornes);
@@ -52,6 +50,21 @@ async function demarrer() {
       const resultat = echanger(etat, etat.empires[etat.joueur], ressource, sens);
       if (!resultat.ok) journaliser(etat, resultat.motif);
     },
+    lever: (id) => {
+      const verdict = lancerLevee(etat, etat.carte.territoires[id]);
+      if (!verdict.possible) journaliser(etat, verdict.motif);
+      recalculerEconomie(etat);
+    },
+    declarerGuerre: (idCible) => {
+      declarerGuerre(etat, etat.joueur, idCible);
+    },
+    selectionnerArmee: (id) => {
+      etat.selectionArmee = id;
+    },
+    faireHalte: (id) => {
+      const armee = etat.armees[id];
+      if (armee) annulerMarche(armee);
+    },
   });
 
   // Le guide met le jeu en pause tant qu'il est ouvert.
@@ -74,7 +87,7 @@ async function demarrer() {
 
   const moteur = new Moteur(
     etat,
-    (e) => surJour(e),
+    (e) => jouerUnJour(e),
     (e, dt) => {
       rendu.dessiner(e, dt);
       ui.rafraichir();
@@ -91,12 +104,7 @@ async function demarrer() {
   window.jeu = { etat, camera, rendu, moteur, ui, guide };
 }
 
-/** Un jour de jeu. Les armées et la diplomatie s'y grefferont aux phases suivantes. */
-function surJour(etat) {
-  avancerJour(etat);
-  appliquerJourEconomie(etat);
-  gererEconomieBots(etat);
-}
+
 
 function brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centrerSurTerritoire) {
   let glisse = false;
@@ -105,6 +113,7 @@ function brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centr
   let dernierY = 0;
 
   canvas.addEventListener('pointerdown', (ev) => {
+    if (ev.button !== 0) return; // le bouton droit sert aux ordres de marche
     glisse = true;
     deplace = false;
     dernierX = ev.clientX;
@@ -128,17 +137,44 @@ function brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centr
   });
 
   const relacher = (ev) => {
-    if (!glisse) return;
+    if (ev.button !== 0 || !glisse) return;
     glisse = false;
     canvas.classList.remove('glisse');
     if (deplace) return;
     const rect = canvas.getBoundingClientRect();
-    etat.selection = rendu.territoireSous(etat, ev.clientX - rect.left, ev.clientY - rect.top);
+    const px = ev.clientX - rect.left;
+    const py = ev.clientY - rect.top;
+    const idArmee = rendu.armeeSous(etat, px, py);
+    if (idArmee) {
+      etat.selectionArmee = idArmee;
+      etat.selection = etat.armees[idArmee].lieu;
+    } else {
+      etat.selectionArmee = null;
+      etat.selection = rendu.territoireSous(etat, px, py);
+    }
   };
   canvas.addEventListener('pointerup', relacher);
   canvas.addEventListener('pointercancel', () => {
     glisse = false;
     canvas.classList.remove('glisse');
+  });
+
+  canvas.addEventListener('contextmenu', (ev) => {
+    ev.preventDefault();
+    const armee = etat.armees[etat.selectionArmee];
+    if (!armee || armee.empire !== etat.joueur) return;
+    const rect = canvas.getBoundingClientRect();
+    const destination = rendu.territoireSous(etat, ev.clientX - rect.left, ev.clientY - rect.top);
+    if (!destination) return;
+
+    if (ev.shiftKey) {
+      const detachement = detacher(etat, armee, destination);
+      if (!detachement) journaliser(etat, 'Ce corps est trop réduit pour se diviser.');
+      return;
+    }
+    if (!ordonnerMarche(etat, armee, destination)) {
+      journaliser(etat, `Aucune route ne mène à ${etat.carte.territoires[destination].nom}.`);
+    }
   });
 
   canvas.addEventListener(
@@ -191,7 +227,8 @@ function brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centr
         break;
       }
       case 'Escape':
-        etat.selection = null;
+        if (etat.selectionArmee) etat.selectionArmee = null;
+        else etat.selection = null;
         break;
       default:
         break;

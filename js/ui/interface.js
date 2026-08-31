@@ -3,7 +3,17 @@
    ============================================================ */
 
 import { RESSOURCES, TERRAINS } from '../data/empires.js';
+import { datif } from '../data/langue.js';
 import { controleur, dateEnTexte } from '../core/etat.js';
+import { sontEnGuerre } from '../core/diplomatie.js';
+import {
+  armeesDans,
+  verifierLevee,
+  COUT_LEVEE,
+  DUREE_LEVEE,
+  TAILLE_CORPS,
+} from '../core/armees.js';
+import { couleurMotivation } from '../render/rendu.js';
 import {
   coutDeveloppement,
   dureeDeveloppement,
@@ -39,6 +49,9 @@ export class Interface {
       pause: document.getElementById('btn-pause'),
       voilePause: document.getElementById('voile-pause'),
       panneauTerritoire: document.getElementById('panneau-territoire'),
+      panneauArmee: document.getElementById('panneau-armee'),
+      troupes: document.getElementById('valeur-troupes'),
+      reserves: document.getElementById('valeur-reserves'),
       panneauEconomie: document.getElementById('panneau-economie'),
       boutonEconomie: document.getElementById('btn-economie'),
       listePuissances: document.getElementById('liste-puissances'),
@@ -48,9 +61,56 @@ export class Interface {
     this.dernierJournal = -1;
     this.signatureTerritoire = null;
     this.signatureEconomie = null;
+    this.signatureArmee = null;
     this.initialiserBandeau();
 
     this.el.boutonEconomie.addEventListener('click', () => this.basculerEconomie());
+    this.brancherPanneaux();
+  }
+
+  /**
+   * Délégation : un seul écouteur par panneau, posé une fois pour toutes.
+   * Les panneaux se reconstruisent à chaque changement d'état ; réattacher
+   * les écouteurs à chaque reconstruction laissait des poignées mortes.
+   */
+  brancherPanneaux() {
+    this.el.panneauTerritoire.addEventListener('click', (ev) => {
+      const cible = ev.target.closest('[data-action], [data-territoire], [data-armee]');
+      if (!cible || cible.disabled) return;
+      if (cible.dataset.territoire) return this.actions.centrerSurTerritoire(cible.dataset.territoire);
+      if (cible.dataset.armee) return this.actions.selectionnerArmee(cible.dataset.armee);
+      switch (cible.dataset.action) {
+        case 'fermer':
+          return this.actions.deselectionner();
+        case 'developper':
+          return this.actions.developper(this.etat.selection);
+        case 'lever':
+          return this.actions.lever(this.etat.selection);
+        case 'guerre':
+          return this.actions.declarerGuerre(cible.dataset.empire);
+        default:
+          return undefined;
+      }
+    });
+
+    this.el.panneauArmee.addEventListener('click', (ev) => {
+      const cible = ev.target.closest('[data-action]');
+      if (!cible || cible.disabled) return;
+      if (cible.dataset.action === 'fermer') this.actions.selectionnerArmee(null);
+      if (cible.dataset.action === 'halte') this.actions.faireHalte(this.etat.selectionArmee);
+    });
+
+    this.el.panneauEconomie.addEventListener('click', (ev) => {
+      const cible = ev.target.closest('[data-action]');
+      if (!cible || cible.disabled) return;
+      if (cible.dataset.action === 'fermer') {
+        this.basculerEconomie();
+      } else if (cible.dataset.action === 'echanger') {
+        this.actions.echanger(cible.dataset.ressource, cible.dataset.sens);
+        this.signatureEconomie = null;
+        this.rafraichirEconomie();
+      }
+    });
   }
 
   initialiserBandeau() {
@@ -100,9 +160,17 @@ export class Interface {
       bloc.classList.toggle('penurie', joueur.penuries[r.id]);
     }
 
+    const hommes = Object.values(etat.armees)
+      .filter((a) => a.empire === joueur.id)
+      .reduce((s, a) => s + a.effectif, 0);
+    this.el.troupes.textContent = `${Math.round(hommes)} 000`;
+    this.el.reserves.textContent = `${Math.round(joueur.reserves)} 000`;
+    this.el.reserves.style.color = joueur.reserves < 10 ? '#e07b6a' : '';
+
     this.rafraichirPuissances();
     this.rafraichirJournal();
     this.rafraichirTerritoire();
+    this.rafraichirArmee();
     if (!this.el.panneauEconomie.classList.contains('cache')) this.rafraichirEconomie();
   }
 
@@ -167,7 +235,14 @@ export class Interface {
       t.developpement,
       Math.round(t.moral),
       t.chantier ? t.chantier.restant : 'x',
+      t.levee ? t.levee.restant : 'x',
       controleur(t),
+      t.occupant ?? '-',
+      this.etat.selectionArmee ?? '-',
+      armeesDans(this.etat, id)
+        .map((a) => `${a.id}:${Math.round(a.effectif)}:${Math.round(a.motivation)}`)
+        .join(','),
+      sontEnGuerre(this.etat, this.etat.joueur, controleur(t)) ? 'g' : 'p',
     ].join('|');
     if (signature === this.signatureTerritoire) return;
     this.signatureTerritoire = signature;
@@ -209,7 +284,7 @@ export class Interface {
 
     panneau.classList.remove('cache');
     panneau.innerHTML = `
-      <button class="fermer-panneau" title="Fermer (Échap)">×</button>
+      <button class="fermer-panneau" data-action="fermer" title="Fermer (Échap)">×</button>
       <h2>${t.nom}</h2>
       <div class="ligne-proprietaire">
         <span class="pastille" style="background:${tenu.couleur}"></span>
@@ -234,20 +309,171 @@ export class Interface {
       </div>
 
       ${aMoi ? this.blocChantier(t) : ''}
+      ${aMoi ? this.blocLevee(t) : ''}
+      ${this.blocCorps(t)}
+      ${aMoi ? '' : this.blocDiplomatie(tenu)}
 
       <div class="bloc">
         <h3>Frontières</h3>
         <div class="liste-voisins">${voisins}</div>
       </div>`;
 
-    for (const puce of panneau.querySelectorAll('.puce-voisin')) {
-      puce.addEventListener('click', () => this.actions.centrerSurTerritoire(puce.dataset.territoire));
+  }
+
+  /** Bloc « levée » du panneau de province. */
+  blocLevee(t) {
+    if (t.levee) {
+      const avancement = 1 - t.levee.restant / t.levee.duree;
+      return `
+        <div class="bloc">
+          <h3>Levée en cours</h3>
+          <div class="paire"><span>Rassemblement</span><span>${t.levee.restant} jours</span></div>
+          <div class="progression"><i style="width:${(avancement * 100).toFixed(1)}%"></i></div>
+        </div>`;
     }
-    panneau.querySelector('.fermer-panneau').addEventListener('click', () => this.actions.deselectionner());
-    const bouton = panneau.querySelector('.action-chantier');
-    if (bouton && !bouton.disabled) {
-      bouton.addEventListener('click', () => this.actions.developper(t.id));
+
+    const verdict = verifierLevee(this.etat, t);
+    const empire = this.etat.empires[controleur(t)];
+    const detail = Object.entries(COUT_LEVEE)
+      .map(([ressource, montant]) => {
+        const r = RESSOURCES.find((res) => res.id === ressource);
+        const manque = empire.stocks[ressource] < montant;
+        return `<span class="${manque ? 'insuffisant' : ''}">
+                  <span class="pastille" style="background:${r.couleur}"></span>${montant}
+                </span>`;
+      })
+      .join('');
+
+    return `
+      <div class="bloc">
+        <h3>Levée</h3>
+        <div class="cout-chantier">
+          ${detail}
+          <span class="${empire.reserves < TAILLE_CORPS ? 'insuffisant' : ''}">${TAILLE_CORPS} 000 hommes</span>
+          <span style="margin-left:auto">${DUREE_LEVEE} j</span>
+        </div>
+        <button class="action-levee action-chantier" data-action="lever" ${verdict.possible ? '' : 'disabled'}>
+          Lever un corps
+        </button>
+        ${verdict.possible ? '' : `<p class="motif-chantier">${verdict.motif}</p>`}
+      </div>`;
+  }
+
+  /** Corps présents dans la province. */
+  blocCorps(t) {
+    const corps = armeesDans(this.etat, t.id);
+    if (corps.length === 0) return '';
+    const lignes = corps
+      .map((a) => {
+        const empire = this.etat.empires[a.empire];
+        const etat = a.enBataille ? 'au combat' : a.route ? 'en marche' : 'au repos';
+        return `
+          <div class="ligne-corps ${this.etat.selectionArmee === a.id ? 'active' : ''}" data-armee="${a.id}">
+            <span class="pastille" style="background:${empire.couleur}"></span>
+            <span class="effectif">${Math.round(a.effectif)} 000</span>
+            <span class="etat">${etat} · moral ${Math.round(a.motivation)}</span>
+          </div>`;
+      })
+      .join('');
+    return `
+      <div class="bloc">
+        <h3>Corps présents</h3>
+        <div class="liste-corps">${lignes}</div>
+      </div>`;
+  }
+
+  /** Déclaration de guerre depuis une province étrangère. */
+  blocDiplomatie(empire) {
+    if (empire.id === this.etat.joueur) return '';
+    if (sontEnGuerre(this.etat, this.etat.joueur, empire.id)) {
+      return `<div class="bloc"><h3>Relations</h3><span class="etiquette-guerre">En guerre</span></div>`;
     }
+    return `
+      <div class="bloc">
+        <h3>Relations</h3>
+        <div class="paire"><span>État</span><span>Paix</span></div>
+        <button class="bouton-guerre" data-action="guerre" data-empire="${empire.id}">
+          Déclarer la guerre ${datif(empire)}
+        </button>
+      </div>`;
+  }
+
+  /* ----------------------------------------------------------
+     Panneau du corps sélectionné
+     ---------------------------------------------------------- */
+
+  rafraichirArmee() {
+    const armee = this.etat.armees[this.etat.selectionArmee];
+    if (!armee) {
+      if (this.signatureArmee !== null) {
+        this.signatureArmee = null;
+        this.el.panneauArmee.classList.add('cache');
+      }
+      return;
+    }
+    const signature = [
+      armee.id,
+      Math.round(armee.effectif * 10),
+      Math.round(armee.motivation),
+      armee.lieu,
+      armee.route ? `${armee.route.etape}/${armee.route.chemin.length}` : 'x',
+      armee.enBataille ? 'b' : '-',
+    ].join('|');
+    if (signature === this.signatureArmee) return;
+    this.signatureArmee = signature;
+    this.afficherArmee(armee);
+  }
+
+  afficherArmee(armee) {
+    const panneau = this.el.panneauArmee;
+    const empire = this.etat.empires[armee.empire];
+    const lieu = this.etat.carte.territoires[armee.lieu];
+    const aMoi = armee.empire === this.etat.joueur;
+
+    let situation;
+    if (armee.enBataille) {
+      situation = `<span class="etiquette-guerre">Au combat</span>
+                   <div class="paire"><span>Champ de bataille</span><span>${lieu.nom}</span></div>`;
+    } else if (armee.route) {
+      const destination = this.etat.carte.territoires[armee.route.chemin[armee.route.chemin.length - 1]];
+      const restant = armee.route.chemin.length - armee.route.etape;
+      situation = `<div class="paire"><span>En marche vers</span><span>${destination.nom}</span></div>
+                   <div class="paire"><span>Étapes restantes</span><span>${restant}</span></div>`;
+    } else {
+      situation = `<div class="paire"><span>Cantonné</span><span>${lieu.nom}</span></div>`;
+    }
+
+    panneau.classList.remove('cache');
+    panneau.innerHTML = `
+      <button class="fermer-panneau" data-action="fermer" title="Fermer (Échap)">×</button>
+      <h2>Corps de ${Math.round(armee.effectif)} 000 hommes</h2>
+      <p class="sous-titre-panneau">
+        <span class="pastille" style="background:${empire.couleur}"></span>${empire.nom}
+      </p>
+
+      <div class="bloc">
+        <h3>Motivation</h3>
+        <div class="paire"><span>Moral des troupes</span><span>${Math.round(armee.motivation)} / 100</span></div>
+        <div class="jauge-motivation">
+          <i style="width:${armee.motivation}%;background:${couleurMotivation(armee.motivation)}"></i>
+        </div>
+      </div>
+
+      <div class="bloc">
+        <h3>Situation</h3>
+        ${situation}
+      </div>
+
+      ${
+        aMoi
+          ? `<div class="ordres">
+               <button class="bouton-ordre" data-action="halte" ${armee.route ? '' : 'disabled'}>Faire halte</button>
+             </div>
+             <p class="indication">Clic droit sur une province pour l'y envoyer.
+             Maj + clic droit pour n'y envoyer que la moitié du corps.</p>`
+          : '<p class="indication">Corps étranger : vous ne pouvez que l\'observer.</p>'
+      }`;
+
   }
 
   /** Bloc « travaux » du panneau de province. */
@@ -288,7 +514,7 @@ export class Interface {
       <div class="bloc">
         <h3>Travaux</h3>
         <div class="cout-chantier">${detail}<span style="margin-left:auto">${dureeDeveloppement(t.developpement)} j</span></div>
-        <button class="action-chantier" ${verdict.possible ? '' : 'disabled'}>
+        <button class="action-chantier" data-action="developper" ${verdict.possible ? '' : 'disabled'}>
           Développer au niveau ${t.developpement + 1}
         </button>
         ${verdict.possible ? '' : `<p class="motif-chantier">${verdict.motif}</p>`}
@@ -336,11 +562,11 @@ export class Interface {
         return `
           <div class="marche-ligne">
             <span class="etiquette"><span class="pastille" style="background:${r.couleur}"></span>${r.nom}</span>
-            <button class="bouton-marche" data-ressource="${r.id}" data-sens="achat"
+            <button class="bouton-marche" data-action="echanger" data-ressource="${r.id}" data-sens="achat"
                     ${peutAcheter ? '' : 'disabled'} title="Acheter ${LOT_MARCHE} ${r.nom.toLowerCase()}">
               acheter ${prix.achat.toFixed(0)} or
             </button>
-            <button class="bouton-marche" data-ressource="${r.id}" data-sens="vente"
+            <button class="bouton-marche" data-action="echanger" data-ressource="${r.id}" data-sens="vente"
                     ${peutVendre ? '' : 'disabled'} title="Vendre ${LOT_MARCHE} ${r.nom.toLowerCase()}">
               vendre ${prix.vente.toFixed(0)} or
             </button>
@@ -349,7 +575,7 @@ export class Interface {
       .join('');
 
     this.el.panneauEconomie.innerHTML = `
-      <button class="fermer-panneau" title="Fermer">×</button>
+      <button class="fermer-panneau" data-action="fermer" title="Fermer">×</button>
       <h2>Trésor</h2>
       <p class="sous-titre-panneau">
         <span class="pastille" style="background:${empire.couleur}"></span>${empire.nom}
@@ -370,16 +596,6 @@ export class Interface {
         <div class="paire"><span>Capacité des entrepôts</span><span>${empire.capacite}</span></div>
       </div>`;
 
-    this.el.panneauEconomie.querySelector('.fermer-panneau').addEventListener('click', () =>
-      this.basculerEconomie(),
-    );
-    for (const bouton of this.el.panneauEconomie.querySelectorAll('.bouton-marche')) {
-      bouton.addEventListener('click', () => {
-        this.actions.echanger(bouton.dataset.ressource, bouton.dataset.sens);
-        this.signatureEconomie = null;
-        this.rafraichirEconomie();
-      });
-    }
   }
 }
 

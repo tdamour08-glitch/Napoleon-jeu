@@ -24,6 +24,9 @@ python3 -m http.server 8000
 | Recentrer sur sa capitale | `C` |
 | Sélectionner une province | clic |
 | Désélectionner | `Échap` |
+| Sélectionner un corps d'armée | clic sur son pion |
+| Ordre de marche | **clic droit** sur une province |
+| Détacher la moitié d'un corps | **Maj + clic droit** |
 | Trésor et marché | `E` ou le bouton **Économie** |
 | Guide « comment jouer » | `H` ou le bouton **Guide** |
 
@@ -37,8 +40,8 @@ permet de ne plus l'afficher au démarrage&nbsp;; il reste accessible par `H`.
 - [x] **Phase 2 — Économie** : production et entretien des cinq ressources,
       chantiers de développement, marché, pénuries, moral des provinces,
       et un guide de jeu intégré.
-- [ ] **Phase 3 — Armées** : levée de troupes, déplacements en temps réel, batailles,
-      jauge de motivation qui monte avec les victoires.
+- [x] **Phase 3 — Armées** : levée de troupes, marches en temps réel, batailles,
+      jauge de motivation, occupation militaire, déclarations de guerre.
 - [ ] **Phase 4 — Intelligence artificielle** : les puissances non jouées cherchent
       à l'emporter, s'étendent et se coalisent.
 - [ ] **Phase 5 — Diplomatie et victoire** : alliances, occupation puis annexion par
@@ -56,6 +59,12 @@ js/map/geo.js         projection de Mercator et géométrie des polygones
 js/map/carte.js       frontières calculées (Voronoï découpé par la côte)
 js/core/etat.js       état de la partie, calendrier, journal
 js/core/economie.js   production, entretien, chantiers, marché
+js/core/armees.js     levées, marches, entretien, motivation
+js/core/combat.js     batailles, déroutes, occupation, insurrections
+js/core/diplomatie.js paix et guerre
+js/core/ia_militaire.js conduite des armées non jouées
+js/core/tour.js       ordre des systèmes dans une journée
+js/data/langue.js     articles et élisions (« aux États-Unis », « d'Île-de-France »)
 js/core/moteur.js     boucle temps réel avec pause et vitesses
 js/render/camera.js   déplacement et zoom
 js/render/rendu.js    dessin sur canvas 2D
@@ -102,3 +111,33 @@ produit jusqu'à 40&nbsp;% de moins. C'est le moral *civil*&nbsp;; la motivation
 Les puissances non jouées gèrent déjà leur économie sommairement (elles vendent leurs
 surplus, achètent ce qui leur manque et développent leurs meilleures provinces). Leur
 véritable intelligence — expansion, guerres, alliances — arrive en phase 4.
+
+### Comment se fait la guerre
+
+Une **levée** puise dans les réserves d'hommes d'un empire (plafonnées par sa
+population), coûte or, fer et bois, et rassemble en vingt jours un corps de
+10&nbsp;000&nbsp;hommes. Les corps amis se regroupent en arrivant dans la même province,
+jusqu'à 60&nbsp;000&nbsp;hommes&nbsp;: au-delà ils restent distincts, faute de quoi chaque
+puissance finirait par ne manœuvrer qu'une seule masse.
+
+Une armée marche d'une province à l'autre par le plus court chemin en jours
+(Dijkstra sur le graphe des provinces). Une traversée maritime prend trois fois plus
+longtemps qu'une étape terrestre et coûte dix points de motivation au débarquement —
+sans marine dédiée, c'est ce qui empêche les descentes amphibies d'être gratuites.
+
+Deux puissances en guerre présentes dans la même province se battent chaque jour. Les
+pertes suivent le rapport des puissances&nbsp;; la puissance d'un corps combine son
+effectif, sa **motivation**, le bonus défensif du terrain et sa **doctrine**. Le camp
+qui souffre le moins gagne de la motivation, l'autre en perd&nbsp;; sous 22, un corps
+rompt le combat et se replie sur une province voisine.
+
+Une province tenue douze jours sans opposition passe sous **occupation** : elle rapporte
+moitié moins, paie mal l'impôt et ne fournit plus de recrues. Elle reste propriété de son
+souverain de droit — l'**annexion** demandera un traité (phase 5). Une occupation sans
+garnison ni corps à portée se **soulève** au bout de trente jours et revient à son
+souverain, ce qui interdit les empires fantômes tenus par cinq mille hommes.
+
+Chaque puissance porte une **doctrine** — élan au combat, ténacité sous le feu, gain de
+motivation après une victoire, discipline défensive, vitesse de marche. Ces valeurs ne
+sont affichées nulle part et ne le seront pas&nbsp;: elles se lisent aux résultats. Les
+troupes napoléoniennes ont, de ce fait, un avantage que le joueur doit deviner.

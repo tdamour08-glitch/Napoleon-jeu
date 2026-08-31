@@ -7,7 +7,7 @@
 
 export const EMPIRES = [
   {
-    id: 'fra',
+    id: 'fra', article: "l'",
     nom: 'Empire français',
     adjectif: 'français',
     souverain: 'Napoléon Ier',
@@ -23,7 +23,7 @@ export const EMPIRES = [
     },
   },
   {
-    id: 'gbr',
+    id: 'gbr', article: "le",
     nom: 'Royaume-Uni',
     adjectif: 'britannique',
     souverain: 'George III',
@@ -33,7 +33,7 @@ export const EMPIRES = [
     doctrine: { elan: 0.95, moralInitial: 60, gainMoralVictoire: 1.0, orBonus: 1.3 },
   },
   {
-    id: 'pru',
+    id: 'pru', article: "le",
     nom: 'Royaume de Prusse',
     adjectif: 'prussien',
     souverain: 'Frédéric-Guillaume III',
@@ -43,7 +43,7 @@ export const EMPIRES = [
     doctrine: { elan: 1.05, moralInitial: 65, gainMoralVictoire: 1.1, disciplineDefensive: 1.15 },
   },
   {
-    id: 'aut',
+    id: 'aut', article: "l'",
     nom: 'Empire d\'Autriche',
     adjectif: 'autrichien',
     souverain: 'François Ier',
@@ -53,7 +53,7 @@ export const EMPIRES = [
     doctrine: { elan: 0.95, moralInitial: 60, gainMoralVictoire: 1.0, reserves: 1.2 },
   },
   {
-    id: 'rus',
+    id: 'rus', article: "l'",
     nom: 'Empire russe',
     adjectif: 'russe',
     souverain: 'Alexandre Ier',
@@ -63,7 +63,7 @@ export const EMPIRES = [
     doctrine: { elan: 0.9, moralInitial: 75, gainMoralVictoire: 0.9, tenacite: 1.25 },
   },
   {
-    id: 'esp',
+    id: 'esp', article: "le",
     nom: 'Royaume d\'Espagne',
     adjectif: 'espagnol',
     souverain: 'Charles IV',
@@ -73,7 +73,7 @@ export const EMPIRES = [
     doctrine: { elan: 0.85, moralInitial: 55, gainMoralVictoire: 1.0, orBonus: 1.25 },
   },
   {
-    id: 'ott',
+    id: 'ott', article: "l'",
     nom: 'Empire ottoman',
     adjectif: 'ottoman',
     souverain: 'Sélim III',
@@ -84,24 +84,24 @@ export const EMPIRES = [
   },
 
   /* --- Puissances mineures --- */
-  { id: 'por', nom: 'Portugal', adjectif: 'portugais', souverain: 'Jean VI', couleur: '#1f7a6f' },
-  { id: 'dan', nom: 'Danemark-Norvège', adjectif: 'danois', souverain: 'Christian VII', couleur: '#c95b7f' },
-  { id: 'sue', nom: 'Suède', adjectif: 'suédois', souverain: 'Gustave IV', couleur: '#4bb3d9' },
-  { id: 'bav', nom: 'Bavière', adjectif: 'bavarois', souverain: 'Maximilien Ier', couleur: '#7fa8d4' },
-  { id: 'sax', nom: 'Saxe', adjectif: 'saxon', souverain: 'Frédéric-Auguste Ier', couleur: '#9c7fbf' },
-  { id: 'han', nom: 'Hanovre', adjectif: 'hanovrien', souverain: 'Régence', couleur: '#a8683f' },
-  { id: 'sui', nom: 'Confédération suisse', adjectif: 'suisse', souverain: 'Diète', couleur: '#cf5b52' },
-  { id: 'tos', nom: 'Toscane', adjectif: 'toscan', souverain: 'Louis Ier', couleur: '#c7a86b' },
-  { id: 'pap', nom: 'États pontificaux', adjectif: 'pontifical', souverain: 'Pie VII', couleur: '#e2e0d5' },
-  { id: 'nap', nom: 'Royaume de Naples', adjectif: 'napolitain', souverain: 'Ferdinand IV', couleur: '#d1743f' },
-  { id: 'var', nom: 'Duché de Varsovie', adjectif: 'polonais', souverain: 'Conseil', couleur: '#b03a5b' },
-  { id: 'bar', nom: 'Régences barbaresques', adjectif: 'barbaresque', souverain: 'Deys', couleur: '#6f8f4a' },
-  { id: 'usa', nom: 'États-Unis', adjectif: 'américain', souverain: 'Thomas Jefferson', couleur: '#5b7fa8' },
-  { id: 'per', nom: 'Perse Qadjar', adjectif: 'persan', souverain: 'Fath Ali Shah', couleur: '#4f9e8f' },
-  { id: 'qin', nom: 'Empire Qing', adjectif: 'chinois', souverain: 'Jiaqing', couleur: '#c2b03f' },
-  { id: 'mar', nom: 'Confédération marathe', adjectif: 'marathe', souverain: 'Peshwa', couleur: '#8f6fb0' },
-  { id: 'kha', nom: 'Khanats d\'Asie centrale', adjectif: 'ouzbek', souverain: 'Khans', couleur: '#9a8c5c' },
-  { id: 'afr', nom: 'Royaumes africains', adjectif: 'africain', souverain: 'Rois', couleur: '#7a9c5f' },
+  { id: 'por', article: "le", nom: 'Portugal', adjectif: 'portugais', souverain: 'Jean VI', couleur: '#1f7a6f' },
+  { id: 'dan', article: "le", nom: 'Danemark-Norvège', adjectif: 'danois', souverain: 'Christian VII', couleur: '#c95b7f' },
+  { id: 'sue', article: "la", nom: 'Suède', adjectif: 'suédois', souverain: 'Gustave IV', couleur: '#4bb3d9' },
+  { id: 'bav', article: "la", nom: 'Bavière', adjectif: 'bavarois', souverain: 'Maximilien Ier', couleur: '#7fa8d4' },
+  { id: 'sax', article: "la", nom: 'Saxe', adjectif: 'saxon', souverain: 'Frédéric-Auguste Ier', couleur: '#9c7fbf' },
+  { id: 'han', article: "le", nom: 'Hanovre', adjectif: 'hanovrien', souverain: 'Régence', couleur: '#a8683f' },
+  { id: 'sui', article: "la", nom: 'Confédération suisse', adjectif: 'suisse', souverain: 'Diète', couleur: '#cf5b52' },
+  { id: 'tos', article: "la", nom: 'Toscane', adjectif: 'toscan', souverain: 'Louis Ier', couleur: '#c7a86b' },
+  { id: 'pap', article: "les", nom: 'États pontificaux', adjectif: 'pontifical', souverain: 'Pie VII', couleur: '#e2e0d5' },
+  { id: 'nap', article: "le", nom: 'Royaume de Naples', adjectif: 'napolitain', souverain: 'Ferdinand IV', couleur: '#d1743f' },
+  { id: 'var', article: "le", nom: 'Duché de Varsovie', adjectif: 'polonais', souverain: 'Conseil', couleur: '#b03a5b' },
+  { id: 'bar', article: "les", nom: 'Régences barbaresques', adjectif: 'barbaresque', souverain: 'Deys', couleur: '#6f8f4a' },
+  { id: 'usa', article: "les", nom: 'États-Unis', adjectif: 'américain', souverain: 'Thomas Jefferson', couleur: '#5b7fa8' },
+  { id: 'per', article: "la", nom: 'Perse Qadjar', adjectif: 'persan', souverain: 'Fath Ali Shah', couleur: '#4f9e8f' },
+  { id: 'qin', article: "l'", nom: 'Empire Qing', adjectif: 'chinois', souverain: 'Jiaqing', couleur: '#c2b03f' },
+  { id: 'mar', article: "la", nom: 'Confédération marathe', adjectif: 'marathe', souverain: 'Peshwa', couleur: '#8f6fb0' },
+  { id: 'kha', article: "les", nom: 'Khanats d\'Asie centrale', adjectif: 'ouzbek', souverain: 'Khans', couleur: '#9a8c5c' },
+  { id: 'afr', article: "les", nom: 'Royaumes africains', adjectif: 'africain', souverain: 'Rois', couleur: '#7a9c5f' },
 ];
 
 /** Doctrine par défaut des puissances qui n'en déclarent pas. */
@@ -111,7 +111,28 @@ export const DOCTRINE_DEFAUT = {
   gainMoralVictoire: 1.0,
 };
 
+/* Les accords grammaticaux vivent dans data/langue.js. */
+
 export const EMPIRES_PAR_ID = Object.fromEntries(EMPIRES.map((e) => [e.id, e]));
+
+
+/** « à l'Empire français », « au Royaume-Uni », « aux États-Unis ». */
+export function datif(empire) {
+  const article = empire.article ?? 'le';
+  if (article === 'le') return `au ${empire.nom}`;
+  if (article === 'les') return `aux ${empire.nom}`;
+  if (article === 'la') return `à la ${empire.nom}`;
+  return `à l'${empire.nom}`;
+}
+
+/** « de l'Empire français », « du Royaume-Uni », « des États-Unis ». */
+export function genitif(empire) {
+  const article = empire.article ?? 'le';
+  if (article === 'le') return `du ${empire.nom}`;
+  if (article === 'les') return `des ${empire.nom}`;
+  if (article === 'la') return `de la ${empire.nom}`;
+  return `de l'${empire.nom}`;
+}
 
 export const EMPIRES_JOUABLES = EMPIRES.filter((e) => e.jouable);
 

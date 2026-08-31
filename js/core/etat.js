@@ -21,6 +21,23 @@ const JOURS_PAR_MOIS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 /** Stock de départ, par ressource. */
 const STOCK_INITIAL = 400;
 
+/**
+ * Garnisons de 1805, en milliers d'hommes.
+ * Les puissances mineures reçoivent un corps dans leur capitale.
+ */
+const FORCES_INITIALES = {
+  fra: [['ile_de_france', 40], ['rhenanie', 30], ['lombardie', 25], ['bourgogne', 20]],
+  gbr: [['angleterre', 30], ['irlande', 10], ['bengale', 15]],
+  pru: [['brandebourg', 35], ['silesie', 20]],
+  aut: [['autriche', 35], ['boheme', 20], ['venetie', 20]],
+  rus: [['moscou', 30], ['lituanie', 30], ['ukraine', 20]],
+  esp: [['castille', 25], ['andalousie', 15]],
+  ott: [['constantinople', 30], ['anatolie', 20], ['egypte', 15]],
+};
+
+/** Guerres déjà engagées au 1er mars 1805. */
+const GUERRES_INITIALES = [['fra', 'gbr']];
+
 const parRessource = (valeur) => Object.fromEntries(RESSOURCES.map((r) => [r.id, valeur]));
 
 /**
@@ -44,6 +61,9 @@ export function creerPartie(idEmpireJoueur) {
       net: parRessource(0),
       penuries: parRessource(false),
       capacite: 0,
+      // Réserves d'hommes mobilisables, en milliers.
+      reserves: 0,
+      reservesMax: 0,
       moral: (modele.doctrine ?? DOCTRINE_DEFAUT).moralInitial ?? DOCTRINE_DEFAUT.moralInitial,
     };
   }
@@ -56,6 +76,9 @@ export function creerPartie(idEmpireJoueur) {
     // Développement : richesse des infrastructures, de 0 à 3.
     territoire.developpement = territoire.capitale ? 2 : Math.max(0, territoire.population - 1);
     territoire.chantier = null;
+    territoire.levee = null;
+    territoire.occupationEnCours = null;
+    territoire.insurrection = 0;
     // Moral de la population : 0 à 100. Le moral des troupes viendra en phase 3.
     territoire.moral = 55;
     if (!empires[territoire.maitre]) {
@@ -74,13 +97,67 @@ export function creerPartie(idEmpireJoueur) {
     vitesse: 1,
     selection: null,
     survol: null,
+    selectionArmee: null,
     journal: [],
     // Avertissements déjà signalés, pour ne pas inonder le journal.
     alertesEmises: {},
+    // Militaire et diplomatie (phases 3 et 5).
+    armees: {},
+    prochainIdArmee: 1,
+    batailles: {},
+    relations: {},
+    economieARecalculer: false,
   };
 
   recenserTerritoires(etat);
+  installerForcesInitiales(etat);
   return etat;
+}
+
+/** Place les garnisons de départ et ouvre les guerres déjà déclarées. */
+function installerForcesInitiales(etat) {
+  for (const [idEmpire, garnisons] of Object.entries(FORCES_INITIALES)) {
+    for (const [idTerritoire, effectif] of garnisons) {
+      const territoire = etat.carte.territoires[idTerritoire];
+      if (!territoire) {
+        console.warn(`[etat] Garnison sur une province inconnue : ${idTerritoire}`);
+        continue;
+      }
+      creerArmeeInitiale(etat, idEmpire, idTerritoire, effectif);
+    }
+  }
+
+  // Chaque puissance mineure garde sa capitale.
+  for (const empire of Object.values(etat.empires)) {
+    if (!empire.vivant || FORCES_INITIALES[empire.id]) continue;
+    const capitale = empire.territoires
+      .map((id) => etat.carte.territoires[id])
+      .find((t) => t.capitale);
+    if (capitale) creerArmeeInitiale(etat, empire.id, capitale.id, 12);
+  }
+
+  for (const [a, b] of GUERRES_INITIALES) {
+    etat.relations[a < b ? `${a}|${b}` : `${b}|${a}`] = 'guerre';
+  }
+}
+
+/**
+ * Création directe d'une armée, sans passer par core/armees.js :
+ * ce module ne doit dépendre de rien pour rester en amont du reste.
+ */
+function creerArmeeInitiale(etat, idEmpire, idTerritoire, effectif) {
+  const empire = etat.empires[idEmpire];
+  const id = `a${etat.prochainIdArmee++}`;
+  etat.armees[id] = {
+    id,
+    empire: idEmpire,
+    effectif,
+    motivation: empire.doctrine.moralInitial,
+    lieu: idTerritoire,
+    route: null,
+    enBataille: false,
+    joursImmobile: 0,
+  };
 }
 
 /** Empire contrôlant effectivement le territoire (occupant s'il existe, sinon maître). */

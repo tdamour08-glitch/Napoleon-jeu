@@ -11,6 +11,7 @@
 
 import { RESSOURCES } from '../data/empires.js';
 import { controleur, estOccupe, recenserTerritoires, alerter, journaliser } from './etat.js';
+import { entretienMilitaire, regenererReserves, calculerReservesMax } from './armees.js';
 
 /** Rendement d'un gisement selon le terrain : certains sols donnent plus. */
 const AFFINITES_TERRAIN = {
@@ -64,7 +65,7 @@ export function productionTerritoire(territoire) {
     sortie[r.id] = territoire.gisements[r.id] * affinites[r.id] * facteur;
   }
   // L'impôt : un État vit d'abord de ses sujets, pas seulement de ses mines.
-  sortie.or += 0.12 * territoire.population * (1 + 0.2 * territoire.developpement) * facteurLoyaute(territoire);
+  sortie.or += 0.3 * territoire.population * (1 + 0.2 * territoire.developpement) * facteurLoyaute(territoire);
   return sortie;
 }
 
@@ -115,6 +116,15 @@ export function recalculerEconomie(etat) {
     }
   }
 
+  // Entretien des armées : le premier poste de dépense d'un empire en guerre.
+  for (const empire of Object.values(etat.empires)) {
+    if (!empire.vivant) continue;
+    const solde = entretienMilitaire(etat, empire.id);
+    for (const r of RESSOURCES) empire.consommation[r.id] += solde[r.id] ?? 0;
+    empire.reservesMax = calculerReservesMax(etat, empire);
+    empire.reserves = Math.min(empire.reserves, empire.reservesMax);
+  }
+
   for (const empire of Object.values(etat.empires)) {
     // Sans charbon ni fer, les ateliers tournent au ralenti.
     const malus = (empire.penuries.charbon ? 0.9 : 1) * (empire.penuries.fer ? 0.92 : 1);
@@ -131,12 +141,21 @@ export function recalculerEconomie(etat) {
   }
 }
 
+/** Réserves d'hommes au début de la partie : la moitié du potentiel. */
+export function initialiserReserves(etat) {
+  for (const empire of Object.values(etat.empires)) {
+    empire.reservesMax = calculerReservesMax(etat, empire);
+    empire.reserves = Math.round(empire.reservesMax * 0.5);
+  }
+}
+
 /* ------------------------------------------------------------
    Un jour d'économie
    ------------------------------------------------------------ */
 
 export function appliquerJourEconomie(etat) {
   recalculerEconomie(etat);
+  regenererReserves(etat);
 
   for (const empire of Object.values(etat.empires)) {
     if (!empire.vivant) continue;

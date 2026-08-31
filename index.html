@@ -51,6 +51,11 @@
 
     <div id="bandeau-ressources" class="bandeau-ressources"></div>
 
+    <div id="bandeau-militaire" class="bandeau-militaire" title="Effectifs sous les armes et réserves mobilisables">
+      <div class="militaire-ligne"><span class="militaire-valeur" id="valeur-troupes">—</span><span class="nom">sous les armes</span></div>
+      <div class="militaire-ligne"><span class="militaire-valeur" id="valeur-reserves">—</span><span class="nom">réserves</span></div>
+    </div>
+
     <div class="bandeau-outils">
       <button id="btn-economie" class="bouton-outil" title="Trésor et marché (E)">Économie</button>
       <button id="btn-guide" class="bouton-outil" title="Comment jouer (H)">Guide</button>
@@ -76,6 +81,9 @@
     <div id="liste-puissances"></div>
   </aside>
 
+  <!-- Corps d'armée sélectionné -->
+  <aside id="panneau-armee" class="panneau panneau-armee cache"></aside>
+
   <!-- Trésor et marché -->
   <aside id="panneau-economie" class="panneau panneau-economie cache"></aside>
 
@@ -86,7 +94,7 @@
   <div id="voile-pause" class="voile-pause">PAUSE</div>
 
   <div id="aide-controles" class="aide-controles">
-    Glisser : déplacer &middot; Molette : zoom &middot; Espace : pause &middot; 1/2/3 : vitesse &middot; C : recentrer &middot; H : guide
+    Glisser : déplacer &middot; Molette : zoom &middot; Espace : pause &middot; 1/2/3 : vitesse &middot; C : recentrer &middot; H : guide<br>Clic : sélectionner &middot; Clic droit : ordre de marche &middot; Maj + clic droit : détacher la moitié
   </div>
 </div>
 
@@ -172,7 +180,58 @@
       </section>
 
       <section>
-        <h3>7. Le moral</h3>
+        <h3>7. Lever et conduire une armée</h3>
+        <p>
+          Dans une de vos provinces, ordonnez une <strong>levée</strong>&nbsp;: elle puise
+          dans vos <strong>réserves d'hommes</strong>, coûte or, fer et bois, et met vingt
+          jours à rassembler un corps de 10&nbsp;000 hommes.
+        </p>
+        <ul>
+          <li><strong>Clic</strong> sur un pion pour sélectionner le corps.</li>
+          <li><strong>Clic droit</strong> sur une province pour l'y envoyer&nbsp;; il suit
+              la route la plus rapide, mer comprise.</li>
+          <li><strong>Maj + clic droit</strong> détache la moitié du corps et l'envoie seule.</li>
+        </ul>
+        <p class="note">
+          Les armées coûtent chaque jour de l'or, du bois, du fer et de l'eau. Une armée
+          impayée déserte.
+        </p>
+      </section>
+
+      <section>
+        <h3>8. Batailles et motivation</h3>
+        <p>
+          Deux puissances en guerre dont les troupes se trouvent dans la même province se
+          livrent bataille jour après jour. Les pertes suivent le rapport des forces&nbsp;;
+          le défenseur profite du terrain — montagnes, forêts et collines coûtent cher à
+          l'assaillant.
+        </p>
+        <p>
+          Chaque corps porte une <strong>jauge de motivation</strong>, la barre colorée
+          sous son pion. Elle <strong>monte à chaque victoire</strong> et tombe avec les
+          défaites, les longues marches en pays ennemi et les pénuries. Une troupe motivée
+          frappe plus fort et marche plus vite&nbsp;; sous 22, elle rompt le combat et se
+          replie.
+        </p>
+        <p class="note">
+          Toutes les armées ne se valent pas, et l'interface ne vous dira pas lesquelles.
+          À vous de lire les résultats.
+        </p>
+      </section>
+
+      <section>
+        <h3>9. Occuper n'est pas annexer</h3>
+        <p>
+          Une province tenue douze jours sans opposition passe sous votre
+          <strong>occupation</strong>&nbsp;: elle vous rapporte, mais moitié moins, paie
+          mal l'impôt et ne fournit aucune recrue. Elle reste la propriété de son
+          souverain de droit tant qu'un <strong>traité</strong> ne vous l'a pas cédée —
+          ce sera l'objet de la phase 5.
+        </p>
+      </section>
+
+      <section>
+        <h3>10. Le moral civil</h3>
         <p>
           Chaque province a un moral qui monte avec le développement et tombe avec les
           pénuries, l'éloignement colonial et l'occupation militaire. Une population
@@ -181,11 +240,10 @@
       </section>
 
       <section>
-        <h3>8. Ce qui vient ensuite</h3>
+        <h3>11. Ce qui vient ensuite</h3>
         <ul>
-          <li><strong>Phase 3</strong>&nbsp;: armées, batailles, et la jauge de motivation des troupes qui monte à chaque victoire.</li>
-          <li><strong>Phase 4</strong>&nbsp;: les cabinets rivaux jouent pour gagner et se coalisent.</li>
-          <li><strong>Phase 5</strong>&nbsp;: occupation, annexion par traité, redditions.</li>
+          <li><strong>Phase 4</strong>&nbsp;: les cabinets rivaux jouent pour gagner, déclarent leurs guerres et se coalisent.</li>
+          <li><strong>Phase 5</strong>&nbsp;: négociations, traités de paix, annexions et redditions.</li>
         </ul>
       </section>
     </div>

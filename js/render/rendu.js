@@ -99,6 +99,158 @@ export class Rendu {
 
     // 6. Capitales et noms.
     this.dessinerMarqueurs(ctx, etat, visibles);
+
+    // 7. Armées, marches et batailles, au premier plan.
+    this.dessinerRouteSelectionnee(ctx, etat);
+    this.dessinerBatailles(ctx, etat);
+    this.dessinerArmees(ctx, etat);
+  }
+
+  /* ----------------------------------------------------------
+     Armées
+     ---------------------------------------------------------- */
+
+  /** Position à l'écran d'une armée, marche comprise. */
+  positionArmee(etat, armee) {
+    const cam = this.camera;
+    const ici = etat.carte.territoires[armee.lieu];
+    if (!armee.route) return cam.versEcran(ici.centre[0], ici.centre[1]);
+
+    const depuis = etat.carte.territoires[armee.route.depuis] ?? ici;
+    const vers = etat.carte.territoires[armee.route.chemin[armee.route.etape]];
+    if (!vers) return cam.versEcran(depuis.centre[0], depuis.centre[1]);
+    const t = Math.max(0, Math.min(1, armee.route.progression));
+    return cam.versEcran(
+      depuis.centre[0] + (vers.centre[0] - depuis.centre[0]) * t,
+      depuis.centre[1] + (vers.centre[1] - depuis.centre[1]) * t,
+    );
+  }
+
+  /**
+   * Positions des pions, empilement compris : plusieurs corps dans une
+   * même province sont décalés pour rester distincts et cliquables.
+   */
+  calculerPionsArmees(etat) {
+    const parLieu = new Map();
+    const pions = [];
+    for (const armee of Object.values(etat.armees)) {
+      const [x, y] = this.positionArmee(etat, armee);
+      const cle = armee.route ? armee.id : armee.lieu;
+      const rang = parLieu.get(cle) ?? 0;
+      parLieu.set(cle, rang + 1);
+      pions.push({ armee, x, y: y - 13 + rang * 17 });
+    }
+    return pions;
+  }
+
+  dessinerArmees(ctx, etat) {
+    const cam = this.camera;
+    if (cam.zoom < 0.5) return;
+    const compact = cam.zoom < 1.1;
+    const largeur = compact ? 20 : 30;
+    const hauteur = compact ? 12 : 17;
+
+    for (const { armee, x, y } of this.calculerPionsArmees(etat)) {
+      if (x < -40 || y < -40 || x > cam.largeur + 40 || y > cam.hauteur + 40) continue;
+      const empire = etat.empires[armee.empire];
+      const selectionnee = etat.selectionArmee === armee.id;
+
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Corps du pion.
+      rectangleArrondi(ctx, -largeur / 2, -hauteur / 2, largeur, hauteur, 3);
+      ctx.fillStyle = empire.couleur;
+      ctx.fill();
+      ctx.lineWidth = selectionnee ? 2.2 : 1.1;
+      ctx.strokeStyle = selectionnee ? '#f4e6b0' : 'rgba(8,10,16,.85)';
+      ctx.stroke();
+
+      // Jauge de motivation, collée sous le pion.
+      const largeurJauge = largeur - 4;
+      ctx.fillStyle = 'rgba(8,10,16,.6)';
+      ctx.fillRect(-largeurJauge / 2, hauteur / 2 + 1, largeurJauge, 3);
+      ctx.fillStyle = couleurMotivation(armee.motivation);
+      ctx.fillRect(-largeurJauge / 2, hauteur / 2 + 1, (largeurJauge * armee.motivation) / 100, 3);
+
+      if (!compact) {
+        ctx.font = '600 11px "Iowan Old Style", Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = contraste(empire.couleur);
+        ctx.fillText(Math.round(armee.effectif), 0, 0.5);
+      }
+
+      // Une armée en marche porte un fanion ; au combat, une pointe rouge.
+      if (armee.enBataille) {
+        ctx.beginPath();
+        ctx.arc(largeur / 2, -hauteur / 2, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#e0503a';
+        ctx.fill();
+      } else if (armee.route) {
+        ctx.beginPath();
+        ctx.moveTo(largeur / 2 - 1, -hauteur / 2);
+        ctx.lineTo(largeur / 2 + 5, -hauteur / 2 + 3);
+        ctx.lineTo(largeur / 2 - 1, -hauteur / 2 + 6);
+        ctx.closePath();
+        ctx.fillStyle = '#f4e6b0';
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  /** Chemin restant de l'armée sélectionnée. */
+  dessinerRouteSelectionnee(ctx, etat) {
+    const armee = etat.armees[etat.selectionArmee];
+    if (!armee?.route) return;
+    const cam = this.camera;
+
+    ctx.save();
+    ctx.setLineDash([6, 5]);
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = 'rgba(232,207,122,.8)';
+    ctx.beginPath();
+    const [x0, y0] = this.positionArmee(etat, armee);
+    ctx.moveTo(x0, y0);
+    for (let i = armee.route.etape; i < armee.route.chemin.length; i++) {
+      const t = etat.carte.territoires[armee.route.chemin[i]];
+      const [x, y] = cam.versEcran(t.centre[0], t.centre[1]);
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /** Anneau battant sur les provinces où l'on se bat. */
+  dessinerBatailles(ctx, etat) {
+    const cam = this.camera;
+    const pulsation = 0.5 + 0.5 * Math.sin(this.tempsAnimation / 220);
+    for (const id of Object.keys(etat.batailles)) {
+      const t = etat.carte.territoires[id];
+      if (!t) continue;
+      const [x, y] = cam.versEcran(t.centre[0], t.centre[1]);
+      const rayon = 16 + 8 * pulsation;
+      ctx.beginPath();
+      ctx.arc(x, y, rayon, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(224,80,58,${(0.35 + 0.4 * pulsation).toFixed(2)})`;
+      ctx.stroke();
+    }
+  }
+
+  /** Armée sous un point écran, ou null. */
+  armeeSous(etat, px, py) {
+    const pions = this.calculerPionsArmees(etat);
+    // On teste du dernier au premier : le pion dessiné au-dessus gagne.
+    for (let i = pions.length - 1; i >= 0; i--) {
+      const { armee, x, y } = pions[i];
+      const compact = this.camera.zoom < 1.1;
+      const dx = compact ? 12 : 17;
+      const dy = compact ? 8 : 11;
+      if (Math.abs(px - x) <= dx && Math.abs(py - y) <= dy) return armee.id;
+    }
+    return null;
   }
 
   dessinerMer(ctx, cam) {
@@ -191,6 +343,30 @@ export class Rendu {
     }
     return null;
   }
+}
+
+function rectangleArrondi(ctx, x, y, largeur, hauteur, rayon) {
+  ctx.beginPath();
+  ctx.moveTo(x + rayon, y);
+  ctx.arcTo(x + largeur, y, x + largeur, y + hauteur, rayon);
+  ctx.arcTo(x + largeur, y + hauteur, x, y + hauteur, rayon);
+  ctx.arcTo(x, y + hauteur, x, y, rayon);
+  ctx.arcTo(x, y, x + largeur, y, rayon);
+  ctx.closePath();
+}
+
+export function couleurMotivation(motivation) {
+  if (motivation >= 70) return '#5fbf72';
+  if (motivation >= 45) return '#d9b23f';
+  if (motivation >= 25) return '#d98a2b';
+  return '#e0503a';
+}
+
+/** Noir ou blanc, selon ce qui se lit le mieux sur la couleur donnée. */
+function contraste(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const luminance = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return luminance > 0.6 ? '#14161f' : '#f2f2f6';
 }
 
 function dansPolygone(x, y, poly) {
