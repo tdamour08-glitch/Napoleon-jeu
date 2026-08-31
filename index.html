@@ -51,6 +51,11 @@
 
     <div id="bandeau-ressources" class="bandeau-ressources"></div>
 
+    <div class="bandeau-outils">
+      <button id="btn-economie" class="bouton-outil" title="Trésor et marché (E)">Économie</button>
+      <button id="btn-guide" class="bouton-outil" title="Comment jouer (H)">Guide</button>
+    </div>
+
     <div class="bandeau-temps">
       <div id="date-jeu" class="date-jeu">&mdash;</div>
       <div class="controles-temps">
@@ -71,6 +76,9 @@
     <div id="liste-puissances"></div>
   </aside>
 
+  <!-- Trésor et marché -->
+  <aside id="panneau-economie" class="panneau panneau-economie cache"></aside>
+
   <!-- Journal -->
   <div id="journal" class="panneau journal"></div>
 
@@ -78,7 +86,114 @@
   <div id="voile-pause" class="voile-pause">PAUSE</div>
 
   <div id="aide-controles" class="aide-controles">
-    Glisser : déplacer &middot; Molette : zoom &middot; Espace : pause &middot; 1/2/3 : vitesse &middot; C : recentrer
+    Glisser : déplacer &middot; Molette : zoom &middot; Espace : pause &middot; 1/2/3 : vitesse &middot; C : recentrer &middot; H : guide
+  </div>
+</div>
+
+<!-- ============ GUIDE ============ -->
+<div id="ecran-guide" class="voile-modale cache">
+  <div class="modale">
+    <button id="btn-fermer-guide" class="fermer-modale" title="Fermer (Échap)">×</button>
+    <h2>Comment jouer</h2>
+    <p class="modale-chapeau">
+      Vous dirigez une puissance européenne à partir de mars 1805. Le temps s'écoule
+      en continu&nbsp;; à vous de l'arrêter quand vous voulez réfléchir.
+    </p>
+
+    <div class="guide-grille">
+      <section>
+        <h3>1. Le but</h3>
+        <p>Une partie se gagne de trois manières&nbsp;:</p>
+        <ul>
+          <li><strong>la reddition</strong> d'un adversaire à bout de forces&nbsp;;</li>
+          <li><strong>un traité de paix</strong> qui vous cède ses provinces&nbsp;;</li>
+          <li><strong>l'élimination totale</strong> de la puissance rivale.</li>
+        </ul>
+        <p class="note">Les guerres arrivent en phase&nbsp;3&nbsp;; pour l'instant, bâtissez.</p>
+      </section>
+
+      <section>
+        <h3>2. Se déplacer</h3>
+        <ul>
+          <li><strong>Glisser</strong> la souris, ou les <strong>flèches</strong> / <strong>WASD</strong>, pour parcourir la carte.</li>
+          <li><strong>Molette</strong> pour zoomer.</li>
+          <li><strong>Clic</strong> sur une province pour l'inspecter, <strong>Échap</strong> pour refermer.</li>
+          <li><strong>C</strong> pour revenir à votre capitale.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>3. Maîtriser le temps</h3>
+        <ul>
+          <li><strong>Espace</strong> met en pause et reprend. Tout reste consultable en pause.</li>
+          <li><strong>1</strong>, <strong>2</strong>, <strong>3</strong> règlent la vitesse sur x1, x2 ou x4.</li>
+        </ul>
+        <p class="note">Un jour de jeu dure environ une seconde à la vitesse x1.</p>
+      </section>
+
+      <section>
+        <h3>4. Les cinq ressources</h3>
+        <p>
+          Chaque province possède des <strong>gisements</strong> de bois, d'eau, de charbon,
+          de fer et d'or. Ce qu'elle produit dépend de ces gisements, de sa population,
+          de son terrain et de son développement.
+        </p>
+        <p>
+          En retour, elle <strong>coûte</strong>&nbsp;: eau et bois pour nourrir ses habitants,
+          or pour l'administrer, charbon et fer pour entretenir ses ateliers. L'or vient
+          aussi de l'impôt, donc de vos sujets.
+        </p>
+        <p class="note">
+          Le bandeau affiche le stock et, en dessous, le solde du jour. Un solde en rouge
+          vous mène à la <strong>pénurie</strong>&nbsp;: le moral chute et les chantiers s'arrêtent.
+        </p>
+      </section>
+
+      <section>
+        <h3>5. Développer une province</h3>
+        <p>
+          Sélectionnez une province qui vous appartient et ouvrez un <strong>chantier</strong>.
+          Il coûte du bois, du fer et de l'or, puis dure plusieurs dizaines de jours.
+        </p>
+        <p>
+          Chaque niveau de développement augmente la production et le moral, mais alourdit
+          l'entretien en charbon et en fer. Développer sans compter ruine un empire.
+        </p>
+      </section>
+
+      <section>
+        <h3>6. Le marché</h3>
+        <p>
+          Le bouton <strong>Économie</strong> ouvre votre trésor. Vous y vendez vos surplus
+          contre de l'or et rachetez ce qui vous manque, par lots de 50. Les marchands
+          prennent leur marge dans les deux sens&nbsp;: on ne s'enrichit pas en faisant
+          des allers-retours.
+        </p>
+      </section>
+
+      <section>
+        <h3>7. Le moral</h3>
+        <p>
+          Chaque province a un moral qui monte avec le développement et tombe avec les
+          pénuries, l'éloignement colonial et l'occupation militaire. Une population
+          démoralisée produit nettement moins.
+        </p>
+      </section>
+
+      <section>
+        <h3>8. Ce qui vient ensuite</h3>
+        <ul>
+          <li><strong>Phase 3</strong>&nbsp;: armées, batailles, et la jauge de motivation des troupes qui monte à chaque victoire.</li>
+          <li><strong>Phase 4</strong>&nbsp;: les cabinets rivaux jouent pour gagner et se coalisent.</li>
+          <li><strong>Phase 5</strong>&nbsp;: occupation, annexion par traité, redditions.</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="modale-pied">
+      <label class="case"><input type="checkbox" id="guide-ne-plus-montrer"> Ne plus afficher au lancement</label>
+      <button id="btn-guide-compris" class="bouton-principal">À l'ouvrage</button>
+    </div>
   </div>
 </div>
 

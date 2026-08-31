@@ -117,11 +117,11 @@ export const EMPIRES_JOUABLES = EMPIRES.filter((e) => e.jouable);
 
 /** Métadonnées d'affichage des ressources. */
 export const RESSOURCES = [
-  { id: 'bois', nom: 'Bois', couleur: '#7d5a3c' },
-  { id: 'eau', nom: 'Eau', couleur: '#3f8fc9' },
-  { id: 'charbon', nom: 'Charbon', couleur: '#5a5a63' },
-  { id: 'fer', nom: 'Fer', couleur: '#9aa3ad' },
-  { id: 'or', nom: 'Or', couleur: '#c9a227' },
+  { id: 'bois', nom: 'Bois', couleur: '#7d5a3c', de: 'de bois', du: 'du bois' },
+  { id: 'eau', nom: 'Eau', couleur: '#3f8fc9', de: "d'eau", du: "de l'eau" },
+  { id: 'charbon', nom: 'Charbon', couleur: '#5a5a63', de: 'de charbon', du: 'du charbon' },
+  { id: 'fer', nom: 'Fer', couleur: '#9aa3ad', de: 'de fer', du: 'du fer' },
+  { id: 'or', nom: 'Or', couleur: '#c9a227', de: "d'or", du: "de l'or" },
 ];
 
 export const TERRAINS = {

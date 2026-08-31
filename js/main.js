@@ -2,12 +2,20 @@
    main.js — assemblage et contrôles
    ============================================================ */
 
-import { creerPartie, journaliser, avancerJour, RESSOURCES } from './core/etat.js';
+import { creerPartie, journaliser, avancerJour } from './core/etat.js';
+import {
+  recalculerEconomie,
+  appliquerJourEconomie,
+  gererEconomieBots,
+  lancerChantier,
+  echanger,
+} from './core/economie.js';
 import { Moteur } from './core/moteur.js';
 import { Camera } from './render/camera.js';
 import { Rendu } from './render/rendu.js';
 import { choisirEmpire } from './ui/menu.js';
 import { Interface } from './ui/interface.js';
+import { Guide } from './ui/guide.js';
 
 async function demarrer() {
   const idEmpire = await choisirEmpire();
@@ -16,6 +24,8 @@ async function demarrer() {
   document.getElementById('ecran-jeu').classList.remove('cache');
 
   const etat = creerPartie(idEmpire);
+  recalculerEconomie(etat);
+
   const canvas = document.getElementById('carte');
   const camera = new Camera(etat.carte.bornes);
   const rendu = new Rendu(canvas, camera);
@@ -32,17 +42,34 @@ async function demarrer() {
     deselectionner: () => {
       etat.selection = null;
     },
+    developper: (id) => {
+      const territoire = etat.carte.territoires[id];
+      const verdict = lancerChantier(etat, territoire);
+      if (!verdict.possible) journaliser(etat, verdict.motif);
+      recalculerEconomie(etat);
+    },
+    echanger: (ressource, sens) => {
+      const resultat = echanger(etat, etat.empires[etat.joueur], ressource, sens);
+      if (!resultat.ok) journaliser(etat, resultat.motif);
+    },
+  });
+
+  // Le guide met le jeu en pause tant qu'il est ouvert.
+  const guide = new Guide({
+    surOuverture: () => {
+      etat.enPause = true;
+    },
   });
 
   // Vue initiale : la capitale du joueur.
+  const empireJoueur = etat.empires[idEmpire];
   const capitale =
-    etat.empires[idEmpire].territoires
-      .map((id) => etat.carte.territoires[id])
-      .find((t) => t.capitale) ?? etat.carte.territoires[etat.empires[idEmpire].territoires[0]];
+    empireJoueur.territoires.map((id) => etat.carte.territoires[id]).find((t) => t.capitale) ??
+    etat.carte.territoires[empireJoueur.territoires[0]];
   camera.centrerSur(capitale.centre[0], capitale.centre[1], 2.4);
   etat.selection = capitale.id;
 
-  journaliser(etat, `Vous prenez la tête de ${etat.empires[idEmpire].nom}.`);
+  journaliser(etat, `<strong>${empireJoueur.nom}</strong> : vous en prenez la tête.`);
   journaliser(etat, 'Les chancelleries d\'Europe observent vos premiers pas.');
 
   const moteur = new Moteur(
@@ -54,27 +81,24 @@ async function demarrer() {
     },
   );
 
-  brancherControles(canvas, camera, rendu, etat, moteur, centrerSurTerritoire);
+  brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centrerSurTerritoire);
   window.addEventListener('resize', () => rendu.redimensionner());
 
   moteur.demarrer();
+  guide.ouvrirAuPremierLancement();
 
   // Accès depuis la console pour le débogage.
-  window.jeu = { etat, camera, rendu, moteur };
+  window.jeu = { etat, camera, rendu, moteur, ui, guide };
 }
 
-/** Un jour de jeu. Les systèmes des phases suivantes viendront s'y greffer. */
+/** Un jour de jeu. Les armées et la diplomatie s'y grefferont aux phases suivantes. */
 function surJour(etat) {
   avancerJour(etat);
-  for (const empire of Object.values(etat.empires)) {
-    if (!empire.vivant) continue;
-    for (const r of RESSOURCES) {
-      empire.stocks[r.id] += empire.production[r.id] * 0.1;
-    }
-  }
+  appliquerJourEconomie(etat);
+  gererEconomieBots(etat);
 }
 
-function brancherControles(canvas, camera, rendu, etat, moteur, centrerSurTerritoire) {
+function brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centrerSurTerritoire) {
   let glisse = false;
   let deplace = false;
   let dernierX = 0;
@@ -133,6 +157,11 @@ function brancherControles(canvas, camera, rendu, etat, moteur, centrerSurTerrit
   }
 
   window.addEventListener('keydown', (ev) => {
+    // Le guide capte Échap en priorité.
+    if (guide.ouvert && ev.code === 'Escape') {
+      guide.fermer();
+      return;
+    }
     switch (ev.code) {
       case 'Space':
         ev.preventDefault();
@@ -146,6 +175,12 @@ function brancherControles(canvas, camera, rendu, etat, moteur, centrerSurTerrit
         break;
       case 'Digit3':
         moteur.definirVitesse(4);
+        break;
+      case 'KeyE':
+        ui.basculerEconomie();
+        break;
+      case 'KeyH':
+        guide.basculer();
         break;
       case 'KeyC': {
         const empire = etat.empires[etat.joueur];

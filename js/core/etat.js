@@ -1,5 +1,9 @@
 /* ============================================================
    etat.js — état global de la partie
+   ------------------------------------------------------------
+   Ce module ne connaît que la structure de la partie : carte,
+   empires, calendrier, journal. Les règles économiques vivent
+   dans core/economie.js, qui s'appuie sur ce module.
    ============================================================ */
 
 import { construireCarte } from '../map/carte.js';
@@ -13,6 +17,11 @@ const NOMS_MOIS = [
 ];
 
 const JOURS_PAR_MOIS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/** Stock de départ, par ressource. */
+const STOCK_INITIAL = 400;
+
+const parRessource = (valeur) => Object.fromEntries(RESSOURCES.map((r) => [r.id, valeur]));
 
 /**
  * Crée l'état d'une nouvelle partie.
@@ -29,24 +38,30 @@ export function creerPartie(idEmpireJoueur) {
       estJoueur: modele.id === idEmpireJoueur,
       vivant: false,
       territoires: [],
-      stocks: Object.fromEntries(RESSOURCES.map((r) => [r.id, 200])),
-      production: Object.fromEntries(RESSOURCES.map((r) => [r.id, 0])),
+      stocks: parRessource(STOCK_INITIAL),
+      production: parRessource(0),
+      consommation: parRessource(0),
+      net: parRessource(0),
+      penuries: parRessource(false),
+      capacite: 0,
       moral: (modele.doctrine ?? DOCTRINE_DEFAUT).moralInitial ?? DOCTRINE_DEFAUT.moralInitial,
     };
   }
 
-  // Rattachement des territoires : `maitre` = souverain de droit, `occupant` = puissance
-  // qui tient le terrain. Un territoire occupé n'est pas encore annexé (phase 5).
+  // `maitre` = souverain de droit, `occupant` = puissance qui tient le terrain.
+  // Un territoire occupé n'est pas encore annexé (phase 5).
   for (const id of carte.ordre) {
     const territoire = carte.territoires[id];
     territoire.occupant = null;
-    territoire.motivation = 50;
+    // Développement : richesse des infrastructures, de 0 à 3.
+    territoire.developpement = territoire.capitale ? 2 : Math.max(0, territoire.population - 1);
+    territoire.chantier = null;
+    // Moral de la population : 0 à 100. Le moral des troupes viendra en phase 3.
+    territoire.moral = 55;
     if (!empires[territoire.maitre]) {
       console.warn(`[etat] Territoire « ${territoire.nom} » rattaché à un empire inconnu.`);
       continue;
     }
-    empires[territoire.maitre].territoires.push(id);
-    empires[territoire.maitre].vivant = true;
   }
 
   const etat = {
@@ -60,9 +75,11 @@ export function creerPartie(idEmpireJoueur) {
     selection: null,
     survol: null,
     journal: [],
+    // Avertissements déjà signalés, pour ne pas inonder le journal.
+    alertesEmises: {},
   };
 
-  recalculerProduction(etat);
+  recenserTerritoires(etat);
   return etat;
 }
 
@@ -71,28 +88,23 @@ export function controleur(territoire) {
   return territoire.occupant ?? territoire.maitre;
 }
 
-/** Recalcule la production de chaque empire à partir de ses territoires contrôlés. */
-export function recalculerProduction(etat) {
+/** Un territoire occupé rapporte moins et coûte plus tant qu'il n'est pas annexé. */
+export function estOccupe(territoire) {
+  return Boolean(territoire.occupant) && territoire.occupant !== territoire.maitre;
+}
+
+/** Reconstitue la liste des provinces de chaque empire. */
+export function recenserTerritoires(etat) {
   for (const empire of Object.values(etat.empires)) {
-    for (const r of RESSOURCES) empire.production[r.id] = 0;
     empire.territoires = [];
     empire.vivant = false;
   }
   for (const id of etat.carte.ordre) {
     const territoire = etat.carte.territoires[id];
-    const idControleur = controleur(territoire);
-    const empire = etat.empires[idControleur];
+    const empire = etat.empires[controleur(territoire)];
     if (!empire) continue;
     empire.territoires.push(id);
     empire.vivant = true;
-    for (const r of RESSOURCES) {
-      empire.production[r.id] += territoire.gisements[r.id] * (1 + territoire.population * 0.15);
-    }
-  }
-  // Bonus de doctrine (ex. le commerce britannique).
-  for (const empire of Object.values(etat.empires)) {
-    if (empire.doctrine?.orBonus) empire.production.or *= empire.doctrine.orBonus;
-    for (const r of RESSOURCES) empire.production[r.id] = Math.round(empire.production[r.id] * 10) / 10;
   }
 }
 
@@ -121,6 +133,19 @@ export function dateEnTexte(date) {
 export function journaliser(etat, texte) {
   etat.journal.unshift({ date: { ...etat.date }, texte });
   if (etat.journal.length > 60) etat.journal.pop();
+}
+
+/**
+ * Journalise au plus une fois par période pour un même sujet.
+ * @param {string} cle identifiant de l'alerte
+ * @param {number} delaiJours nombre de jours de silence entre deux rappels
+ */
+export function alerter(etat, cle, delaiJours, texte) {
+  const dernier = etat.alertesEmises[cle];
+  if (dernier !== undefined && etat.jourEcoule - dernier < delaiJours) return false;
+  etat.alertesEmises[cle] = etat.jourEcoule;
+  journaliser(etat, texte);
+  return true;
 }
 
 export { EMPIRES_PAR_ID, RESSOURCES };

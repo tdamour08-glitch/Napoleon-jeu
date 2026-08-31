@@ -24,13 +24,19 @@ python3 -m http.server 8000
 | Recentrer sur sa capitale | `C` |
 | Sélectionner une province | clic |
 | Désélectionner | `Échap` |
+| Trésor et marché | `E` ou le bouton **Économie** |
+| Guide « comment jouer » | `H` ou le bouton **Guide** |
+
+Le guide s'ouvre au premier lancement et met le jeu en pause. Une case à cocher
+permet de ne plus l'afficher au démarrage&nbsp;; il reste accessible par `H`.
 
 ## Feuille de route
 
 - [x] **Phase 1 — Fondations** : carte du monde, provinces, caméra, temps réel avec
       pause, choix de l'empire, panneaux d'information.
-- [ ] **Phase 2 — Économie** : production et consommation de bois, eau, charbon,
-      fer et or ; bâtiments et entretien.
+- [x] **Phase 2 — Économie** : production et entretien des cinq ressources,
+      chantiers de développement, marché, pénuries, moral des provinces,
+      et un guide de jeu intégré.
 - [ ] **Phase 3 — Armées** : levée de troupes, déplacements en temps réel, batailles,
       jauge de motivation qui monte avec les victoires.
 - [ ] **Phase 4 — Intelligence artificielle** : les puissances non jouées cherchent
@@ -48,12 +54,14 @@ js/data/monde.js      contours des continents + une capitale par province
 js/data/empires.js    puissances, couleurs, doctrines
 js/map/geo.js         projection de Mercator et géométrie des polygones
 js/map/carte.js       frontières calculées (Voronoï découpé par la côte)
-js/core/etat.js       état de la partie, calendrier, production
+js/core/etat.js       état de la partie, calendrier, journal
+js/core/economie.js   production, entretien, chantiers, marché
 js/core/moteur.js     boucle temps réel avec pause et vitesses
 js/render/camera.js   déplacement et zoom
 js/render/rendu.js    dessin sur canvas 2D
 js/ui/menu.js         écran de sélection d'empire
-js/ui/interface.js    bandeau, panneaux, journal
+js/ui/interface.js    bandeau, panneaux, marché, journal
+js/ui/guide.js        fenêtre « comment jouer »
 js/main.js            assemblage et contrôles
 ```
 
@@ -68,3 +76,29 @@ partagées. Les détroits et routes maritimes sont ajoutés à la main
 (`LIAISONS_MARITIMES`).
 
 Ajouter une province tient donc en une ligne de données.
+
+### Comment tourne l'économie
+
+Chaque jour, chaque province produit selon ses **gisements** (0 à 3 par ressource),
+sa population, l'affinité de son terrain et son **développement** (0 à 3). En regard,
+elle consomme de l'eau et du bois pour ses habitants, de l'or pour son administration,
+du charbon et du fer pour ses ateliers. L'or vient surtout de l'impôt, donc de la
+population, ce qui rend la conquête payante.
+
+Un **chantier** fait monter le développement d'un cran&nbsp;: il se paie d'avance en
+bois, fer et or, puis dure de 60 à 140 jours. Il augmente la production et le moral,
+mais alourdit durablement l'entretien&nbsp;— développer sans compter mène à la pénurie.
+
+Une **pénurie** (stock à zéro et solde négatif) fait chuter le moral des provinces,
+arrête les chantiers faute de solde à payer les ouvriers, et ralentit les ateliers.
+Le **marché** permet d'y remédier en échangeant n'importe quelle ressource contre de
+l'or par lots de 50, les marchands prenant 15&nbsp;% de marge dans les deux sens.
+
+Le **moral** d'une province glisse vers une valeur d'équilibre fixée par son
+développement, son éloignement et les pénuries de l'empire. Une population démoralisée
+produit jusqu'à 40&nbsp;% de moins. C'est le moral *civil*&nbsp;; la motivation des
+*troupes*, qui monte avec les victoires, viendra en phase 3.
+
+Les puissances non jouées gèrent déjà leur économie sommairement (elles vendent leurs
+surplus, achètent ce qui leur manque et développent leurs meilleures provinces). Leur
+véritable intelligence — expansion, guerres, alliances — arrive en phase 4.
