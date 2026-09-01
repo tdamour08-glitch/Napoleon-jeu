@@ -20,7 +20,7 @@ import {
 import { armeesDans, verifierLevee, estPort, fusionsPossibles } from '../core/armees.js';
 import { UNITES, TAILLE_REGIMENT, decrireComposition } from '../data/unites.js';
 import { couleurMotivation } from '../render/rendu.js';
-import { partEuropeenne } from '../core/traites.js';
+import { partEuropeenne, empireMaritime } from '../core/traites.js';
 import {
   cultureDe,
   estNoyau,
@@ -90,6 +90,10 @@ export class Interface {
       barreVictoire: document.getElementById('barre-victoire'),
       seuilVictoire: document.getElementById('seuil-victoire'),
       chiffreVictoire: document.getElementById('chiffre-victoire'),
+      bandeauMers: document.getElementById('bandeau-mers'),
+      barreColonies: document.getElementById('barre-colonies'),
+      barrePorts: document.getElementById('barre-ports'),
+      chiffreMers: document.getElementById('chiffre-mers'),
       listePuissances: document.getElementById('liste-puissances'),
       journal: document.getElementById('journal'),
     };
@@ -282,6 +286,7 @@ export class Interface {
     this.el.barreVictoire.style.width = `${Math.min(100, europe.part * 100).toFixed(1)}%`;
     this.el.seuilVictoire.style.left = `${europe.seuil * 100}%`;
     this.el.chiffreVictoire.textContent = `${europe.tenues} / ${europe.total}`;
+    this.rafraichirMers(joueur);
 
     this.rafraichirPuissances();
     this.rafraichirJournal();
@@ -289,6 +294,29 @@ export class Interface {
     this.rafraichirArmee();
     if (this.panneauLateral === 'economie') this.rafraichirEconomie();
     if (this.panneauLateral === 'diplomatie') this.rafraichirDiplomatie();
+  }
+
+  /**
+   * La quatrième voie de victoire n'intéresse que qui a des comptoirs :
+   * on ne montre la jauge qu'à ceux-là.
+   */
+  rafraichirMers(joueur) {
+    const mers = empireMaritime(this.etat, joueur.id);
+    // Sans un navire, la voie des mers ne veut rien dire : on masque la jauge.
+    if (mers.flotte === 0) {
+      this.el.bandeauMers.classList.add('cache');
+      return;
+    }
+    this.el.bandeauMers.classList.remove('cache');
+    this.el.barreColonies.style.width =
+      `${Math.min(100, (mers.partFlotte / mers.partRequise) * 100).toFixed(0)}%`;
+    this.el.barrePorts.style.width =
+      `${Math.min(100, (mers.ports / mers.portsRequis) * 100).toFixed(0)}%`;
+    this.el.chiffreMers.textContent =
+      mers.tenue > 0
+        ? `${(mers.tenue / 365).toFixed(1)} / 3 ans`
+        : `${Math.round(mers.partFlotte * 100)} % · ${mers.ports}/${mers.portsRequis}`;
+    this.el.bandeauMers.classList.toggle('tenue', mers.tenue > 0);
   }
 
   rafraichirPuissances() {

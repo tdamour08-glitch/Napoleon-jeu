@@ -638,6 +638,12 @@ html, body {
 .bandeau-victoire .barre i { display: block; height: 100%; background: linear-gradient(90deg, var(--or), var(--or-clair)); }
 .bandeau-victoire .barre .seuil { position: absolute; top: -1px; bottom: -1px; width: 2px; background: rgba(255,255,255,.6); }
 .bandeau-victoire .chiffre { font-size: 11px; color: var(--texte-doux); font-variant-numeric: tabular-nums; }
+/* Jauge des mers : deux barres serrées, colonies puis ports. */
+#bandeau-mers { min-width: 76px; gap: 1px; }
+#bandeau-mers .barre { height: 4px; }
+#bandeau-mers .barre i { background: linear-gradient(90deg, #2f7fa8, #6fc3e8); }
+#bandeau-mers.tenue .barre i { background: linear-gradient(90deg, var(--or), var(--or-clair)); }
+#bandeau-mers.tenue .chiffre { color: var(--or-clair); }
 
 /* ------------------------------------------------------------
    Phase 6 — règles de la partie, budget, politiques sociales
@@ -788,3 +794,37 @@ html, body {
   border: 1px solid var(--bordure); border-radius: 3px;
 }
 .paire-intrigue > span { font-size: 12px; color: var(--texte-doux); }
+
+/* ------------------------------------------------------------
+   Bandeau : tenir sur les écrans d'ordinateur portable
+   ------------------------------------------------------------
+   Le bandeau est une seule rangée dont plusieurs blocs portent un
+   min-width : sous 1600 px il débordait, et la date comme les
+   contrôles de temps sortaient de l'écran. On resserre par paliers,
+   en sacrifiant d'abord les libellés — la pastille de couleur et
+   l'infobulle disent déjà de quelle ressource il s'agit.
+   ------------------------------------------------------------ */
+
+@media (max-width: 1599px) {
+  #bandeau { gap: 9px; padding: 0 9px; }
+  .bandeau-ressources { gap: 7px; }
+  .ressource .nom { display: none; }
+  .bandeau-empire { min-width: 0; }
+  .bandeau-militaire { min-width: 0; padding-left: 8px; }
+  .bandeau-victoire { min-width: 72px; padding-left: 8px; }
+  #bandeau-mers { min-width: 64px; }
+  .date-jeu { min-width: 0; font-size: 13px; }
+  .bouton-outil { padding: 7px 8px; }
+}
+
+@media (max-width: 1379px) {
+  #bandeau { gap: 6px; }
+  .bandeau-titre { font-size: 15px; }
+  .bandeau-sous { display: none; }
+  .bandeau-militaire .nom { display: none; }
+  .bandeau-victoire .titre { font-size: 10px; }
+  .bandeau-victoire { min-width: 58px; }
+  #bandeau-mers { min-width: 54px; }
+  .bouton-outil { padding: 7px 6px; font-size: 12px; }
+  .bouton-temps { width: 29px; }
+}

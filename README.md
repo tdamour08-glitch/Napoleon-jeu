@@ -236,16 +236,42 @@ terrain et du nombre de ses ennemis. Ce qui n'est pas annexé est évacué&nbsp;
 le terrain.
 
 Une puissance sans terre ni armée **capitule** sans condition&nbsp;; celle qui perd sa
-dernière province de droit **disparaît**. Trois chemins mènent à la victoire&nbsp;:
+dernière province de droit **disparaît**. Quatre chemins mènent à la victoire&nbsp;:
 
 - **les traités** — avoir arraché des provinces à chacune des six autres grandes
   puissances, et n'être plus en guerre avec aucune&nbsp;;
 - **l'hégémonie** — posséder en droit 45&nbsp;% des provinces d'Europe&nbsp;;
-- **l'élimination** — ne laisser à aucune rivale la moindre province.
+- **l'élimination** — ne laisser à aucune rivale la moindre province&nbsp;;
+- **la maîtrise des mers** — tenir plus de la moitié de la puissance navale du monde
+  *et* trois ports sur dix, trois années durant.
 
 Le seuil d'hégémonie a été fixé sur mesure&nbsp;: en partie simulée, les vainqueurs
 culminent entre 28 et 40&nbsp;% avant que la voie des traités ne l'emporte. Au-dessus de
 45&nbsp;%, la condition ne se déclencherait jamais.
+
+#### La maîtrise des mers
+
+Les trois premières conditions sont terrestres et européennes. Mesuré, le Royaume-Uni
+jouait bien — 33&nbsp;% de l'Europe en vingt ans — sans jamais pouvoir gagner&nbsp;: il
+lui manquait un objectif à sa mesure.
+
+Une première version demandait de tenir huit colonies sur dix. La mesure l'a réfutée&nbsp;:
+une marine ne prend pas le Pérou, et le Royaume-Uni *perdait* des colonies (4 → 3 en
+vingt-cinq ans) au lieu d'en gagner. La condition retenue porte donc sur ce qu'un amiral
+peut réellement obtenir&nbsp;:
+
+| Critère | Seuil | Départ britannique |
+|---|---|---|
+| Part de la puissance navale mondiale | 50 % | 38 % |
+| Ports tenus en droit | 16 sur 51 (30 %) | 7 |
+| Durée de tenue continue | 3 ans | — |
+
+Mesuré sur cinq parties de vingt-cinq ans, Royaume-Uni jouant délibérément la carte
+navale (guerres coloniales à répétition, traités qui préfèrent un comptoir à une plaine
+allemande, chantiers navals permanents)&nbsp;: **une victoire par les mers**, une
+quasi-victoire (2,2 années de tenue sur 3, coiffée par une hégémonie russe), et trois
+échecs — soit par manque de ports, soit parce qu'une puissance continentale a gagné
+d'abord. La condition est atteignable et disputée, ce qui était le but.
 
 ### Le gouvernement : budget, impôt et choix sociaux
 
@@ -441,6 +467,57 @@ principautés allemandes s'est retourné contre le joueur, qui s'est fait des en
 gagner assez vite. Le moteur est déterministe, mais fortement sensible aux conditions
 initiales&nbsp;: ces quatre lignes disent que plusieurs conduites gagnent, pas qu'il
 existe un ordre de mérite stable.
+
+### Les sept sièges sont-ils jouables ?
+
+Chaque grande puissance conduite **exactement de la même façon** — signer dès que
+l'adversaire plie, acheter des amis quand les caisses le permettent, assimiler en temps
+de paix —, vingt ans, seule la fiche de départ changeant&nbsp;:
+
+| Puissance | Départ | Après 20 ans | Issue |
+|---|---|---|---|
+| France | 22 % | 34 % | **victoire par les traités** |
+| Royaume-Uni | 5 % | 33 % | pas de victoire par cette conduite (voir la voie des mers) |
+| Espagne | 5 % | 28 % | pas de victoire |
+| Russie | 14 % | 26 % | pas de victoire |
+| Prusse | 9 % | 17 % | **victoire par les traités** |
+| Autriche | 10 % | 17 % | pas de victoire |
+| Ottomans | 9 % | 0 % | **éliminée** |
+
+Les fiches de départ, pour comparer&nbsp;:
+
+| Puissance | Prov. | Europe | Or/jour | Hommes | Centralisation |
+|---|---|---|---|---|---|
+| France | 14 | 22 % | 23,8 | 148 000 | 1,35 |
+| Royaume-Uni | 7 | 5 % | **35,7** | 102 000 | 0,75 |
+| Espagne | 7 | 5 % | 25,4 | 85 000 | 0,95 |
+| Russie | 9 | 14 % | 12,7 | 93 000 | 1,05 |
+| Autriche | 6 | 10 % | 8,6 | 76 000 | 0,78 |
+| Ottomans | 9 | 9 % | 15,9 | 76 000 | 0,75 |
+| Prusse | 5 | 9 % | 3,9 | 57 000 | 1,15 |
+
+Le rapport voulu entre Londres et Paris est tenu à la décimale&nbsp;: **35,7 contre 23,8
+par jour, soit exactement 1,50**.
+
+#### Ce que cette mesure a corrigé
+
+- **L'Espagne n'était pas jouable.** Conduite comme les autres, elle tombait de 5&nbsp;%
+  à 2&nbsp;% de l'Europe — une province. Elle avait l'argent (3ᵉ bourse du jeu) mais
+  53 000 hommes, le plus faible effectif, et aucune profondeur. Corrigé en lui donnant la
+  **masse** (85 000 hommes, réparties jusqu'en Catalogne et en Nouvelle-Espagne) sans la
+  qualité — sa doctrine garde un élan de 0,85, l'armée reste médiocre — et le **commerce
+  colonial** qui lui revient (`commerce` 1,0 → 1,5, `credit` 1,3&nbsp;: l'argent des
+  Amériques). Résultat mesuré : 5&nbsp;% → **28&nbsp;%**.
+- **Le Royaume-Uni ne pouvait pas gagner.** Corrigé par la quatrième voie de victoire
+  (voir *La maîtrise des mers*).
+
+#### Ce qui reste à corriger
+
+**L'Empire ottoman est le siège le plus fragile.** Il s'effondre 4 fois sur 5 en partie
+pilotée, et la conduite standard ne l'a pas sauvé. La cause est structurelle&nbsp;: sa
+centralisation de 0,75 et ses provinces de culture étrangère (Grèce, Serbie, Égypte,
+Crimée) en font la puissance la plus revendiquée de la carte, donc la plus attaquée.
+Ce n'est pas un réglage de chiffres mais un problème de conception, non traité à ce jour.
 
 ### La France est-elle jouable ?
 

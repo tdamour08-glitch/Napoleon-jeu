@@ -29,6 +29,59 @@ export const GRANDES_PUISSANCES = ['fra', 'gbr', 'pru', 'aut', 'rus', 'esp', 'ot
  */
 const SEUIL_HEGEMONIE = 0.45;
 
+/**
+ * La quatrième voie : l'empire des mers. Les trois autres conditions sont
+ * terrestres et européennes — une puissance dont toute la fortune tient à sa
+ * flotte jouait bien sans jamais pouvoir gagner.
+ *
+ * On ne lui demande pas de conquérir les Amériques : une marine ne prend pas
+ * le Pérou, et la mesure l'a confirmé. On lui demande ce qu'un amiral peut
+ * réellement obtenir — couler les autres marines et tenir les rades :
+ *
+ *   • plus de la moitié de la puissance navale du monde. Le Royaume-Uni part
+ *     à 38 %, la France à 25 %, l'Espagne à 10 % : il faut donc son Trafalgar ;
+ *   • trois ports sur dix (16 des 51 de la carte). Il en tient sept en 1805 ;
+ *   • et tenir les deux, trois années durant.
+ */
+const MAITRISE_MERS = { flotte: 0.5, ports: 0.3, duree: 1095 };
+
+/** Flotte et rades : où en est une puissance sur la voie de l'empire des mers ? */
+export function empireMaritime(etat, idEmpire) {
+  let ports = 0;
+  let portsTotal = 0;
+  for (const id of etat.carte.ordre) {
+    const t = etat.carte.territoires[id];
+    if (t.voisinsMaritimes.length === 0) continue;
+    portsTotal += 1;
+    if (t.maitre === idEmpire) ports += 1;
+  }
+
+  let flotte = 0;
+  let flotteMonde = 0;
+  for (const armee of Object.values(etat.armees)) {
+    if (armee.domaine !== 'mer') continue;
+    flotteMonde += armee.effectif;
+    if (armee.empire === idEmpire) flotte += armee.effectif;
+  }
+
+  return {
+    ports,
+    portsTotal,
+    portsRequis: Math.ceil(portsTotal * MAITRISE_MERS.ports),
+    flotte,
+    flotteMonde,
+    partFlotte: flotteMonde > 0 ? flotte / flotteMonde : 0,
+    partRequise: MAITRISE_MERS.flotte,
+    duree: MAITRISE_MERS.duree,
+    tenue: etat.maitriseMers?.[idEmpire] ?? 0,
+  };
+}
+
+/** La puissance tient-elle la mer et les rades, aujourd'hui ? */
+function tientLesMers(bilan) {
+  return bilan.partFlotte >= bilan.partRequise && bilan.ports >= bilan.portsRequis;
+}
+
 /* ------------------------------------------------------------
    Ce qui est négociable
    ------------------------------------------------------------ */
@@ -369,6 +422,30 @@ export function verifierVictoire(etat) {
         id,
         `${Math.round(part * 100)} % des provinces d'Europe reconnaissent son autorité.`,
       );
+    }
+
+    // L'empire des mers ne s'emporte pas d'un coup : il se tient trois ans.
+    const mers = empireMaritime(etat, id);
+    if (tientLesMers(mers)) {
+      const tenue = (etat.maitriseMers[id] ?? 0) + 1;
+      etat.maitriseMers[id] = tenue;
+      if (tenue === Math.round(MAITRISE_MERS.duree / 2) && empire.estJoueur) {
+        alerter(
+          etat,
+          'Vous tenez les mers depuis dix-huit mois. Encore autant, et le monde sera à vous.',
+        );
+      }
+      if (tenue >= MAITRISE_MERS.duree) {
+        return finir(
+          etat,
+          'mers',
+          id,
+          `${Math.round(mers.partFlotte * 100)} % de la puissance navale du monde et ` +
+            `${mers.ports} ports, trois années durant : le commerce du monde passe par ses rades.`,
+        );
+      }
+    } else if (etat.maitriseMers[id]) {
+      etat.maitriseMers[id] = 0;
     }
   }
 

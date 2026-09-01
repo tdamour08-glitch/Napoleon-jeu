@@ -72,8 +72,13 @@ const FORCES_INITIALES = {
     ['saint_petersbourg', { ligne: 5, fregate: 4 }],
   ],
   esp: [
-    ['castille', { infanterie: 18, cavalerie: 4, artillerie: 3 }],
-    ['andalousie', { infanterie: 11, cavalerie: 3, artillerie: 1 }],
+    // L'armée espagnole de 1805 est nombreuse et mal commandée : on lui donne
+    // la masse (doctrine.elan 0.85 lui retire la qualité), sans quoi le siège
+    // n'était pas tenable — mesuré, il tombait à une province en vingt ans.
+    ['castille', { infanterie: 20, cavalerie: 5, artillerie: 3 }],
+    ['andalousie', { infanterie: 13, cavalerie: 3, artillerie: 2 }],
+    ['catalogne', { infanterie: 12, cavalerie: 3, artillerie: 2 }],
+    ['mexique', { infanterie: 6, cavalerie: 2, artillerie: 1 }],
     ['andalousie', { ligne: 8, fregate: 5 }],
   ],
   ott: [
@@ -195,6 +200,7 @@ export function creerPartie(idEmpireJoueur, options = {}) {
     dernieresGuerres: {},
     subsides: {},
     intrigues: {},
+    maitriseMers: {},
     equilibre: null,
     economieARecalculer: false,
   };

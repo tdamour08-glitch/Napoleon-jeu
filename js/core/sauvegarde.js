@@ -59,6 +59,7 @@ export function serialiser(etat) {
     dernieresGuerres: etat.dernieresGuerres,
     subsides: etat.subsides,
     intrigues: etat.intrigues,
+    maitriseMers: etat.maitriseMers,
     alertesEmises: etat.alertesEmises,
     journal: etat.journal,
     fin: etat.fin,
@@ -102,6 +103,7 @@ export function restaurer(donnees) {
   etat.dernieresGuerres = donnees.dernieresGuerres ?? {};
   etat.subsides = donnees.subsides ?? {};
   etat.intrigues = donnees.intrigues ?? {};
+  etat.maitriseMers = donnees.maitriseMers ?? {};
   etat.alertesEmises = donnees.alertesEmises ?? {};
   etat.journal = donnees.journal ?? [];
   etat.fin = donnees.fin ?? null;

@@ -96,7 +96,10 @@ export const EMPIRES = [
     couleur: '#d98a2b',
     jouable: true,
     resume: 'L\'or des Amériques afflue, mais l\'armée est en piteux état.',
-    doctrine: { elan: 0.85, moralInitial: 55, gainMoralVictoire: 1.0, commerce: 1.0 },
+    // Le galion de Manille et la flotte des Indes : le commerce colonial
+    // espagnol vaut celui de personne d'autre après Londres. C'est la
+    // contrepartie d'une armée nombreuse mais médiocre — l'élan reste bas.
+    doctrine: { elan: 0.85, moralInitial: 55, gainMoralVictoire: 1.0, commerce: 1.5, credit: 1.3 },
   },
   {
     id: 'ott',

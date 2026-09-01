@@ -280,6 +280,7 @@ function afficherFinDePartie(etat) {
     elimination: 'Victoire par élimination',
     traites: 'Victoire par les traités',
     hegemonie: 'Victoire par hégémonie',
+    mers: 'Victoire par la maîtrise des mers',
     defaite: 'Défaite',
   };
   const titre = gagne || type === 'defaite' ? titres[type] : `${empire.nom} l'emporte`;
