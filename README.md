@@ -50,14 +50,19 @@ chemins relatifs) : **GitHub Pages suffit à l'héberger tel quel**. Un fichier
 Attention : *parcourir le dépôt sur github.com ne fait pas tourner le jeu* — GitHub
 affiche le code source, il ne l'exécute pas. Il faut Pages.
 
-**Pages exige un dépôt public** (sur les comptes gratuits ; les dépôts privés
-demandent un abonnement GitHub Pro ou Team). Une fois le dépôt public :
+**Pages exige un dépôt public** sur les comptes gratuits ; les dépôts privés demandent
+un abonnement GitHub Pro ou Team.
 
-1. **Settings** → **Pages** ;
-2. *Source* : **Deploy from a branch** ;
-3. *Branch* : `claude/napoleonic-strategy-game-1exbzx`, dossier `/ (root)` → **Save** ;
-4. une minute plus tard, le jeu est à
-   `https://tdamour08-glitch.github.io/Napoleon-jeu/`.
+Le dépôt étant public, `.github/workflows/pages.yml` publie le jeu à chaque poussée.
+Il reste **une manipulation, une seule fois** :
+
+> **Settings** → **Pages** → *Source* : **GitHub Actions**
+
+Le jeton fourni aux Actions n'a pas le droit de créer le site Pages lui-même
+(`configure-pages` avec `enablement` échoue sur *Resource not accessible by
+integration*), d'où ce réglage manuel. Une fois fait, le workflow se charge de tout et
+le jeu est à `https://tdamour08-glitch.github.io/Napoleon-jeu/` une minute après chaque
+poussée.
 
 Les sauvegardes passent par le `localStorage` du navigateur : elles restent sur la
 machine du joueur, et l'export de partie en fichier fonctionne aussi bien en ligne

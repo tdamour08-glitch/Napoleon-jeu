@@ -1,9 +1,15 @@
 # Publie le jeu sur GitHub Pages à chaque poussée.
 #
 # Le jeu est entièrement statique : il n'y a rien à compiler, on
-# téléverse le dépôt tel quel. « configure-pages » avec enablement
-# active Pages tout seul si ce n'est pas déjà fait, ce qui évite
-# d'aller le régler à la main dans les paramètres.
+# téléverse le dépôt tel quel.
+#
+# UNE MANIPULATION EST REQUISE, UNE SEULE FOIS :
+#   Settings → Pages → Source : « GitHub Actions ».
+# Le jeton fourni aux Actions n'a pas le droit de créer le site Pages
+# lui-même — « configure-pages » avec « enablement » échoue sur
+# « Resource not accessible by integration ». Une fois la source
+# choisie dans les paramètres, ce workflow publie tout seul à chaque
+# poussée, sans plus rien à faire.
 
 name: Publier sur GitHub Pages
 
@@ -34,8 +40,6 @@ jobs:
 
       - name: Préparer Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Téléverser le site
         uses: actions/upload-pages-artifact@v3
