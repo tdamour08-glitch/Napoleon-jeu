@@ -13,6 +13,28 @@ python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
 
+### Jouer en ligne, sans rien installer
+
+Le jeu est entièrement statique (aucune dépendance, aucune compilation, tous les
+chemins relatifs) : **GitHub Pages suffit à l'héberger tel quel**. Un fichier
+`.nojekyll` est présent pour que Pages serve les dossiers sans les retraiter.
+
+Attention : *parcourir le dépôt sur github.com ne fait pas tourner le jeu* — GitHub
+affiche le code source, il ne l'exécute pas. Il faut Pages.
+
+**Pages exige un dépôt public** (sur les comptes gratuits ; les dépôts privés
+demandent un abonnement GitHub Pro ou Team). Une fois le dépôt public :
+
+1. **Settings** → **Pages** ;
+2. *Source* : **Deploy from a branch** ;
+3. *Branch* : `claude/napoleonic-strategy-game-1exbzx`, dossier `/ (root)` → **Save** ;
+4. une minute plus tard, le jeu est à
+   `https://tdamour08-glitch.github.io/Claude-code-test/`.
+
+Les sauvegardes passent par le `localStorage` du navigateur : elles restent sur la
+machine du joueur, et l'export de partie en fichier fonctionne aussi bien en ligne
+qu'en local.
+
 ## Commandes
 
 | Action | Commande |
