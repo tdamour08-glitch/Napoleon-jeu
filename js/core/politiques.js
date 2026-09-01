@@ -55,19 +55,23 @@ export const POLITIQUES = [
   {
     id: 'abolition',
     nom: 'Abolition des privilèges',
-    resume: 'Les terres circulent, les familles s\'agrandissent. Les nobles ne paient plus la cour.',
+    resume: 'Les terres circulent, les familles s\'agrandissent — et les ordres privilégiés paient enfin l\'impôt.',
     cout: { or: 0.03 },
-    effets: { croissance: 0.35, moral: 6, impot: -0.08, plafond: 0.4 },
+    effets: { croissance: 0.35, moral: 6, impot: 0.06, plafond: 0.4 },
   },
 ];
 
 export const POLITIQUES_PAR_ID = Object.fromEntries(POLITIQUES.map((p) => [p.id, p]));
 
-/** Somme des effets des politiques actives d'un empire. */
+/**
+ * Somme des effets qui s'appliquent à un empire : ses réformes HÉRITÉES,
+ * acquises avant 1805 et donc déjà payées par l'Histoire, et les politiques
+ * qu'il DÉCRÈTE en cours de partie, celles-là à ses frais.
+ */
 export function effetsPolitiques(empire) {
   const total = { croissance: 0, moral: 0, reserves: 0, chantiers: 0, impot: 0, plafond: 0, production: 0 };
   if (!empire) return total;
-  for (const id of empire.politiques) {
+  for (const id of [...(empire.heritage ?? []), ...(empire.politiques ?? [])]) {
     const politique = POLITIQUES_PAR_ID[id];
     if (!politique) continue;
     for (const [cle, valeur] of Object.entries(politique.effets)) total[cle] += valeur;
@@ -75,7 +79,10 @@ export function effetsPolitiques(empire) {
   return total;
 }
 
-/** Coût quotidien des politiques, proportionnel à la population administrée. */
+/**
+ * Coût quotidien des politiques décrétées, proportionnel à la population
+ * administrée. L'héritage, lui, ne coûte rien : il est acquis.
+ */
 export function coutPolitiques(etat, empire) {
   let sujets = 0;
   for (const id of empire.territoires) sujets += etat.carte.territoires[id].population;
@@ -92,6 +99,7 @@ export function coutPolitiques(etat, empire) {
 
 export function basculerPolitique(etat, empire, idPolitique) {
   if (!POLITIQUES_PAR_ID[idPolitique]) return false;
+  if (empire.heritage?.includes(idPolitique)) return false; // on ne défait pas l'Histoire
   const position = empire.politiques.indexOf(idPolitique);
   if (position >= 0) {
     empire.politiques.splice(position, 1);

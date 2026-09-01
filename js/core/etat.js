@@ -128,7 +128,10 @@ export function creerPartie(idEmpireJoueur, options = {}) {
       souverainete: 0,
       // Gouvernement : taux de l'impôt, politiques décrétées, dette publique.
       tauxImposition: 1,
-      politiques: [...(modele.politiquesInitiales ?? [])],
+      // Acquis avant 1805 : effets gratuits, et l'on ne peut y renoncer.
+      heritage: [...(modele.heritage ?? [])],
+      // Décrétées en cours de règne : payées chaque jour.
+      politiques: [],
       dette: 0,
       interets: 0,
       budget: { impots: 0, ressources: 0, administration: 0, armee: 0, politiques: 0, interets: 0 },
@@ -186,6 +189,7 @@ export function creerPartie(idEmpireJoueur, options = {}) {
     fin: null,
     debutsDeGuerre: {},
     dernieresGuerres: {},
+    subsides: {},
     equilibre: null,
     economieARecalculer: false,
   };

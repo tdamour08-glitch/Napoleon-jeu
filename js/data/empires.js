@@ -9,7 +9,7 @@ export const EMPIRES = [
   {
     id: 'fra',
     // La Révolution a aboli les privilèges, ouvert les écoles centrales et les hospices : trois réformes déjà acquises.
-    politiquesInitiales: ['abolition', 'sante', 'instruction'], article: "l'",
+    heritage: ['abolition', 'sante', 'instruction'], article: "l'",
     nom: 'Empire français',
     adjectif: 'français',
     souverain: 'Napoléon Ier',
@@ -27,19 +27,19 @@ export const EMPIRES = [
   {
     id: 'gbr',
     // La Royal Society et les manufactures ; surtout, la Banque d'Angleterre, qui lui ouvre un crédit sans rival.
-    politiquesInitiales: ['instruction'], article: "le",
+    heritage: ['instruction'], article: "le",
     nom: 'Royaume-Uni',
     adjectif: 'britannique',
     souverain: 'George III',
     couleur: '#c0392b',
     jouable: true,
     resume: 'Maîtresse des mers et banquière des coalitions, faible sur terre.',
-    doctrine: { elan: 0.95, moralInitial: 60, gainMoralVictoire: 1.0, orBonus: 1.3, credit: 1.8 },
+    doctrine: { elan: 0.95, moralInitial: 60, gainMoralVictoire: 1.0, commerce: 2.3, credit: 1.8 },
   },
   {
     id: 'pru',
     // Le système cantonal et l'école obligatoire depuis Frédéric II.
-    politiquesInitiales: ['conscription', 'instruction'], article: "le",
+    heritage: ['conscription', 'instruction'], article: "le",
     nom: 'Royaume de Prusse',
     adjectif: 'prussien',
     souverain: 'Frédéric-Guillaume III',
@@ -51,7 +51,7 @@ export const EMPIRES = [
   {
     id: 'aut',
     // Les routes, les canaux et la bureaucratie léguées par Joseph II.
-    politiquesInitiales: ['travaux'], article: "l'",
+    heritage: ['travaux'], article: "l'",
     nom: 'Empire d\'Autriche',
     adjectif: 'autrichien',
     souverain: 'François Ier',
@@ -63,7 +63,7 @@ export const EMPIRES = [
   {
     id: 'rus',
     // Le recrutement par levées : une réserve d'hommes que nul ne peut égaler.
-    politiquesInitiales: ['conscription'], article: "l'",
+    heritage: ['conscription'], article: "l'",
     nom: 'Empire russe',
     adjectif: 'russe',
     souverain: 'Alexandre Ier',
@@ -75,19 +75,19 @@ export const EMPIRES = [
   {
     id: 'esp',
     // Les réformes bourboniennes : routes royales, canaux et arsenaux.
-    politiquesInitiales: ['travaux'], article: "le",
+    heritage: ['travaux'], article: "le",
     nom: 'Royaume d\'Espagne',
     adjectif: 'espagnol',
     souverain: 'Charles IV',
     couleur: '#d98a2b',
     jouable: true,
     resume: 'L\'or des Amériques afflue, mais l\'armée est en piteux état.',
-    doctrine: { elan: 0.85, moralInitial: 55, gainMoralVictoire: 1.0, orBonus: 1.25 },
+    doctrine: { elan: 0.85, moralInitial: 55, gainMoralVictoire: 1.0, commerce: 1.0 },
   },
   {
     id: 'ott',
     // Les fondations pieuses entretiennent hospices et fontaines dans tout l'empire.
-    politiquesInitiales: ['sante'], article: "l'",
+    heritage: ['sante'], article: "l'",
     nom: 'Empire ottoman',
     adjectif: 'ottoman',
     souverain: 'Sélim III',
@@ -98,7 +98,7 @@ export const EMPIRES = [
   },
 
   /* --- Puissances mineures --- */
-  { id: 'por', article: "le", nom: 'Portugal', adjectif: 'portugais', souverain: 'Jean VI', couleur: '#1f7a6f' },
+  { id: 'por', article: "le", doctrine: { commerce: 1.4 }, nom: 'Portugal', adjectif: 'portugais', souverain: 'Jean VI', couleur: '#1f7a6f' },
   { id: 'dan', article: "le", nom: 'Danemark-Norvège', adjectif: 'danois', souverain: 'Christian VII', couleur: '#c95b7f' },
   { id: 'sue', article: "la", nom: 'Suède', adjectif: 'suédois', souverain: 'Gustave IV', couleur: '#4bb3d9' },
   { id: 'bav', article: "la", nom: 'Bavière', adjectif: 'bavarois', souverain: 'Maximilien Ier', couleur: '#7fa8d4' },

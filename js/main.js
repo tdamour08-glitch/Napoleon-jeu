@@ -18,6 +18,7 @@ import {
   declarerGuerre,
   rompreAlliance,
   conclureAlliance,
+  verserSubside,
 } from './core/diplomatie.js';
 import { repondreAlliance } from './core/ia_strategie.js';
 import { appliquerTraite, evaluerTraite, partEuropeenne, GRANDES_PUISSANCES } from './core/traites.js';
@@ -99,6 +100,10 @@ async function demarrer() {
     },
     rompreAlliance: (idCible) => {
       rompreAlliance(etat, etat.joueur, idCible);
+    },
+    verserSubside: (idCible) => {
+      const resultat = verserSubside(etat, etat.joueur, idCible);
+      ui.annoncerReponse(resultat.motif, resultat.ok);
     },
     repondreOffre: (cle, type, accepte) => {
       const registre = type === 'alliance' ? etat.offresAlliance : etat.offresPaix;

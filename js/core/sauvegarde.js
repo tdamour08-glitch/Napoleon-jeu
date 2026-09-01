@@ -22,7 +22,7 @@ const CHAMPS_TERRITOIRE = [
 /** Champs d'un empire qui évoluent en cours de partie. */
 const CHAMPS_EMPIRE = [
   'stocks', 'reserves', 'reservesMax', 'dette', 'interets', 'tauxImposition',
-  'politiques', 'moral', 'eliminee',
+  'politiques', 'heritage', 'moral', 'eliminee',
 ];
 
 /** Réduit la partie à un objet transportable. */
@@ -57,6 +57,7 @@ export function serialiser(etat) {
     traitesImposes: etat.traitesImposes,
     debutsDeGuerre: etat.debutsDeGuerre,
     dernieresGuerres: etat.dernieresGuerres,
+    subsides: etat.subsides,
     alertesEmises: etat.alertesEmises,
     journal: etat.journal,
     fin: etat.fin,
@@ -98,6 +99,7 @@ export function restaurer(donnees) {
   etat.traitesImposes = donnees.traitesImposes ?? {};
   etat.debutsDeGuerre = donnees.debutsDeGuerre ?? {};
   etat.dernieresGuerres = donnees.dernieresGuerres ?? {};
+  etat.subsides = donnees.subsides ?? {};
   etat.alertesEmises = donnees.alertesEmises ?? {};
   etat.journal = donnees.journal ?? [];
   etat.fin = donnees.fin ?? null;

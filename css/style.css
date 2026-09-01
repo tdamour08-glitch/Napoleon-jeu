@@ -755,3 +755,8 @@ html, body {
 .menu-deroulant button:hover:not(:disabled) { background: rgba(255,255,255,.08); color: var(--or-clair); }
 .menu-deroulant button:disabled { opacity: .35; cursor: not-allowed; }
 .menu-deroulant hr { border: none; border-top: 1px solid var(--bordure); margin: 4px 6px; }
+
+/* Réformes héritées : acquises, non modifiables */
+.politique.acquise { cursor: default; background: rgba(201,162,39,.08); border-color: rgba(201,162,39,.3); }
+.politique.acquise:hover { background: rgba(201,162,39,.08); }
+.politique .marque { color: var(--or); font-size: 13px; line-height: 1.2; }

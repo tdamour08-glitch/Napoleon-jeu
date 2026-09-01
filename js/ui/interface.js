@@ -10,6 +10,8 @@ import {
   sontAllies,
   relation,
   opinion,
+  attenteSubside,
+  SUBSIDE,
   GUERRE,
   ALLIANCE,
 } from '../core/diplomatie.js';
@@ -19,6 +21,7 @@ import { couleurMotivation } from '../render/rendu.js';
 import { partEuropeenne } from '../core/traites.js';
 import {
   POLITIQUES,
+  POLITIQUES_PAR_ID,
   effetsPolitiques,
   coutPolitiques,
   moralImpot,
@@ -143,6 +146,8 @@ export class Interface {
           return this.actions.rompreAlliance(idEmpire);
         case 'guerre':
           return this.actions.declarerGuerre(idEmpire);
+        case 'subside':
+          return this.actions.verserSubside(idEmpire);
         case 'accepter':
           return this.actions.repondreOffre(cible.dataset.cle, cible.dataset.type, true);
         case 'refuser':
@@ -503,7 +508,11 @@ export class Interface {
     const signature = [
       offres.map((o) => `${o.type}:${o.cle}`).join(','),
       puissances
-        .map((e) => `${e.id}:${relation(etat, moi, e.id)}:${Math.round(opinion(etat, e.id, moi) / 5)}`)
+        .map(
+          (e) =>
+            `${e.id}:${relation(etat, moi, e.id)}:${Math.round(opinion(etat, e.id, moi) / 5)}` +
+            `:${attenteSubside(etat, moi, e.id) > 0 ? 'x' : 'o'}`,
+        )
         .join('|'),
       etat.equilibre?.hegemon ?? '-',
       this.reponseDiplomatique?.texte ?? '',
@@ -543,6 +552,8 @@ export class Interface {
       .join('');
 
     const hegemon = etat.equilibre?.hegemon ?? null;
+    const moiEmpire = etat.empires[moi];
+    const attente = Object.fromEntries(puissances.map((e) => [e.id, attenteSubside(etat, moi, e.id)]));
     const lignes = puissances
       .map((e) => {
         const etatRelation = relation(etat, moi, e.id);
@@ -566,6 +577,15 @@ export class Interface {
                      <button class="bouton-mini danger" data-action="guerre" data-empire="${e.id}">Déclarer la guerre</button>`
                   : `<button class="bouton-mini" data-action="alliance" data-empire="${e.id}">Proposer une alliance</button>
                      <button class="bouton-mini danger" data-action="guerre" data-empire="${e.id}">Déclarer la guerre</button>`
+            }
+            ${
+              enGuerre
+                ? ''
+                : `<button class="bouton-mini" data-action="subside" data-empire="${e.id}"
+                           title="Verser ${SUBSIDE.montant} pièces d'or pour gagner ${SUBSIDE.estime} points d'estime"
+                           ${attente[e.id] > 0 || moiEmpire.stocks.or < SUBSIDE.montant ? 'disabled' : ''}>
+                     ${attente[e.id] > 0 ? `Subside dans ${attente[e.id]} j` : `Subside ${SUBSIDE.montant} or`}
+                   </button>`
             }
           </div>`;
       })
@@ -786,6 +806,7 @@ export class Interface {
       empire.tauxImposition.toFixed(2),
       Math.round(empire.dette),
       empire.politiques.join(','),
+      (empire.heritage ?? []).join(','),
     ].join('#');
     if (signature === this.signatureEconomie) return;
     this.signatureEconomie = signature;
@@ -847,7 +868,7 @@ export class Interface {
   /** Recettes, dépenses, impôt et dette : le budget de l'État, compté en or. */
   blocBudget(empire) {
     const b = empire.budget;
-    const recettes = b.impots + b.ressources;
+    const recettes = b.impots + (b.commerce ?? 0) + b.ressources;
     const depenses = b.administration + b.armee + b.politiques + b.interets;
     const solde = recettes - depenses;
     const plafond = plafondEmprunt(empire);
@@ -859,7 +880,8 @@ export class Interface {
         <h3>Budget · par jour</h3>
         <div class="budget-lignes">
           <div class="budget-ligne recette"><span>Impôt</span><span>+${b.impots.toFixed(1)}</span></div>
-          <div class="budget-ligne recette"><span>Mines et commerce</span><span>+${b.ressources.toFixed(1)}</span></div>
+          <div class="budget-ligne recette"><span>Commerce maritime</span><span>+${(b.commerce ?? 0).toFixed(1)}</span></div>
+          <div class="budget-ligne recette"><span>Mines et domaines</span><span>+${b.ressources.toFixed(1)}</span></div>
           <div class="budget-ligne depense"><span>Administration</span><span>−${b.administration.toFixed(1)}</span></div>
           <div class="budget-ligne depense"><span>Solde des armées</span><span>−${b.armee.toFixed(1)}</span></div>
           <div class="budget-ligne depense"><span>Politiques</span><span>−${b.politiques.toFixed(1)}</span></div>
@@ -895,7 +917,7 @@ export class Interface {
   blocPolitiques(empire) {
     const cout = coutPolitiques(this.etat, empire);
     const effets = effetsPolitiques(empire);
-    const lignes = POLITIQUES.map((politique) => {
+    const lignes = POLITIQUES.filter((p) => !(empire.heritage ?? []).includes(p.id)).map((politique) => {
       const active = empire.politiques.includes(politique.id);
       const prix = Object.entries(politique.cout)
         .map(([r, taux]) => {
@@ -915,7 +937,23 @@ export class Interface {
         </label>`;
     }).join('');
 
+    const acquises = (empire.heritage ?? [])
+      .map((id) => POLITIQUES_PAR_ID[id])
+      .filter(Boolean)
+      .map(
+        (politique) => `
+          <div class="politique acquise" title="${politique.resume}">
+            <span class="marque">✓</span>
+            <span>
+              <span class="titre">${politique.nom}</span>
+              <span class="detail">Acquis avant 1805 — sans coût.</span>
+            </span>
+          </div>`,
+      )
+      .join('');
+
     return `
+      ${acquises ? `<div class="bloc"><h3>Héritage du règne</h3><div class="liste-politiques">${acquises}</div></div>` : ''}
       <div class="bloc">
         <h3>Choix sociaux</h3>
         <div class="liste-politiques">${lignes}</div>

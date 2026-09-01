@@ -11,7 +11,7 @@
 
 import { RESSOURCES } from '../data/empires.js';
 import { controleur, estOccupe, recenserTerritoires, alerter, journaliser } from './etat.js';
-import { entretienMilitaire, regenererReserves, calculerReservesMax } from './armees.js';
+import { entretienMilitaire, regenererReserves, calculerReservesMax, estPort } from './armees.js';
 import {
   effetsPolitiques,
   coutPolitiques,
@@ -36,6 +36,14 @@ const AFFINITES_TERRAIN = {
 
 /** Une colonie est loin : elle rend moins et coûte plus à administrer. */
 const RENDEMENT_COLONIE = 0.7;
+
+/**
+ * Commerce maritime : l'or que rapportent les ports et surtout les colonies.
+ * C'est là, et non dans l'impôt, que se joue la richesse des puissances
+ * maritimes — les Indes et les Antilles pèsent bien plus qu'une province.
+ */
+const OR_PAR_PORT = 0.35;
+const OR_PAR_COLONIE = 1.6;
 /** Une province occupée mais non annexée travaille à contrecœur. */
 const RENDEMENT_OCCUPATION = 0.5;
 
@@ -118,7 +126,10 @@ export function recalculerEconomie(etat) {
   }
 
   for (const empire of Object.values(etat.empires)) {
-    empire.budget = { impots: 0, ressources: 0, administration: 0, armee: 0, politiques: 0, interets: 0 };
+    empire.budget = {
+      impots: 0, commerce: 0, ressources: 0,
+      administration: 0, armee: 0, politiques: 0, interets: 0,
+    };
   }
 
   for (const id of etat.carte.ordre) {
@@ -134,6 +145,23 @@ export function recalculerEconomie(etat) {
     empire.budget.impots += production.impots;
     empire.budget.ressources += production.or - production.impots;
     empire.budget.administration += consommation.or;
+  }
+
+  // Le commerce maritime, compté empire par empire : il dépend des ports et
+  // des colonies, non de chaque province prise séparément.
+  for (const empire of Object.values(etat.empires)) {
+    if (!empire.vivant) continue;
+    let ports = 0;
+    let colonies = 0;
+    for (const id of empire.territoires) {
+      const t = etat.carte.territoires[id];
+      if (estPort(t)) ports += 1;
+      if (t.colonie) colonies += 1;
+    }
+    const commerce =
+      (ports * OR_PAR_PORT + colonies * OR_PAR_COLONIE) * (empire.doctrine.commerce ?? 1);
+    empire.budget.commerce = commerce;
+    empire.production.or += commerce;
   }
 
   // Entretien des armées et des politiques : les deux grands postes de dépense.
@@ -164,8 +192,7 @@ export function recalculerEconomie(etat) {
     if (rendement !== 1) {
       for (const r of RESSOURCES) empire.production[r.id] *= rendement;
     }
-    // Le commerce britannique et l'or des Amériques : bonus de doctrine.
-    if (empire.doctrine?.orBonus) empire.production.or *= empire.doctrine.orBonus;
+
     for (const r of RESSOURCES) {
       empire.net[r.id] = empire.production[r.id] - empire.consommation[r.id];
     }

@@ -202,6 +202,57 @@ export function sontVoisines(etat, a, b) {
   return false;
 }
 
+/* ------------------------------------------------------------
+   Subsides
+   ------------------------------------------------------------ */
+
+/** Montant d'un subside et estime qu'il achète. */
+export const SUBSIDE = { montant: 200, estime: 8, delai: 90 };
+
+/**
+ * Verser de l'or à une puissance pour s'en faire bien voir. C'est ainsi que
+ * Londres a payé les coalitions — et c'est le moyen, pour qui domine, de
+ * désamorcer celle qui se prépare contre lui.
+ * @returns {{ok: boolean, motif: string}}
+ */
+export function verserSubside(etat, donneur, beneficiaire, montant = SUBSIDE.montant) {
+  if (donneur === beneficiaire) return { ok: false, motif: 'On ne se paie pas soi-même.' };
+  const payeur = etat.empires[donneur];
+  const recu = etat.empires[beneficiaire];
+  if (!payeur || !recu?.vivant) return { ok: false, motif: 'Cette puissance n\'existe plus.' };
+  if (sontEnGuerre(etat, donneur, beneficiaire)) {
+    return { ok: false, motif: 'On ne subventionne pas celui qu\'on combat.' };
+  }
+  if (payeur.stocks.or < montant) return { ok: false, motif: 'Le Trésor ne suit pas.' };
+
+  const cleSubside = cle(donneur, beneficiaire);
+  const dernier = etat.subsides[cleSubside] ?? -SUBSIDE.delai;
+  if (etat.jourEcoule - dernier < SUBSIDE.delai) {
+    const reste = SUBSIDE.delai - (etat.jourEcoule - dernier);
+    return { ok: false, motif: `Un subside vient d'être versé. Patientez ${reste} jours.` };
+  }
+
+  payeur.stocks.or -= montant;
+  recu.stocks.or = Math.min(recu.capacite, recu.stocks.or + montant);
+  etat.subsides[cleSubside] = etat.jourEcoule;
+  ajusterOpinion(etat, beneficiaire, donneur, (montant / SUBSIDE.montant) * SUBSIDE.estime);
+
+  if (payeur.estJoueur || recu.estJoueur) {
+    journaliser(
+      etat,
+      `<strong>${payeur.nom}</strong> verse un subside de ${Math.round(montant)} pièces d'or ` +
+        `${avecArticle(recu)}.`,
+    );
+  }
+  return { ok: true, motif: `${recu.nom} accepte le subside.` };
+}
+
+/** Jours restant avant de pouvoir verser un nouveau subside. */
+export function attenteSubside(etat, a, b) {
+  const dernier = etat.subsides[cle(a, b)] ?? -SUBSIDE.delai;
+  return Math.max(0, SUBSIDE.delai - (etat.jourEcoule - dernier));
+}
+
 /** Les puissances en guerre contre au moins un ennemi commun. */
 export function ennemisCommuns(etat, a, b) {
   const mesEnnemis = new Set(ennemis(etat, a));

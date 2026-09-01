@@ -274,19 +274,24 @@ Chaque grande puissance commence avec les réformes qu'elle avait réellement ac
 La France en a trois — c'est la mieux dotée, et c'est aussi contre elle que l'Europe se
 liguera.
 
-| Puissance | Réformes acquises | Justification |
-|---|---|---|
-| France | Abolition des privilèges, Hospices, Écoles | la Révolution a fait les trois |
-| Royaume-Uni | Écoles, **crédit ×1,8** | Royal Society, manufactures, Banque d'Angleterre |
-| Prusse | Conscription, Écoles | système cantonal et école obligatoire |
-| Autriche | Grands travaux | routes et bureaucratie de Joseph II |
-| Russie | Conscription | le recrutement par levées |
-| Espagne | Grands travaux | réformes bourboniennes, plus l'or des Amériques |
-| Empire ottoman | Hospices | les fondations pieuses |
+Ce sont des **acquis** : leurs effets jouent pleinement, ils ne coûtent rien — l'Histoire
+les a déjà payés — et l'on ne peut pas y renoncer. Seules les politiques décrétées en
+cours de règne se paient.
 
-Ces réformes coûtent chaque jour&nbsp;: la France démarre en déficit d'environ cinq
-pièces d'or par jour et doit relever son impôt ou vendre ses surplus. C'est le prix de
-son avance.
+| Puissance | Réformes acquises | Autres avantages |
+|---|---|---|
+| France | Abolition des privilèges, Hospices, Écoles | meilleure infanterie, plus forte population |
+| Royaume-Uni | Écoles | **commerce ×2,3**, **crédit ×1,8**, cinquante navires |
+| Prusse | Conscription, Écoles | discipline défensive |
+| Autriche | Grands travaux | réserves d'hommes profondes |
+| Russie | Conscription | ténacité au feu, espace |
+| Espagne | Grands travaux | commerce colonial |
+| Empire ottoman | Hospices | réserves, trois continents |
+
+Le **commerce maritime** rapporte selon les ports et les colonies. C'est lui qui fait la
+fortune des puissances maritimes : au 1er mars 1805, l'Angleterre encaisse 33 pièces d'or
+par jour contre 22 à la France — **une fois et demie** —, ce qui lui permet d'entretenir la
+première marine du monde et d'acheter des alliances.
 
 ### Enregistrer une partie
 
@@ -305,6 +310,32 @@ Le menu propose trois réglages, sous **Règles de la partie**&nbsp;:
 - **Forces égales** — chaque grande puissance débute avec le même effectif total.
 - **Ardeur des cabinets rivaux** — prudente, normale ou implacable : à quelle fréquence
   les puissances non jouées déclarent la guerre.
+
+### Les subsides
+
+Deux cents pièces d'or achètent huit points d'estime, une fois par trimestre et par
+puissance. C'est l'instrument de qui veut défaire une coalition sans tirer un coup de
+feu — l'or anglais a financé toutes les coalitions contre Napoléon, et rien n'interdit
+de retourner le procédé. Les cabinets rivaux s'en servent aussi dès que leurs caisses
+le permettent.
+
+### Quatre ouvertures françaises
+
+La France part avec le plus d'atouts, et c'est précisément pour cela que l'Europe se
+liguera contre elle si le joueur laisse faire. Plusieurs conduites l'évitent. Mesuré sur
+douze ans, toutes puissances pilotées, le joueur français se contentant de signer un
+traité dès qu'un adversaire plie&nbsp;:
+
+| Ouverture | Résultat |
+|---|---|
+| Ne rien faire de particulier | survit, 22 % de l'Europe, pic à 41 % |
+| Frapper la Prusse aussitôt | survit, 22 %, la menace prussienne est étouffée |
+| Subsides et traités (pacifique) | survit, 22 %, mais ne s'agrandit pas |
+| Dévorer les principautés allemandes | **victoire française en 1815**, 48 % de l'Europe |
+
+Aucune n'est la bonne réponse unique, et la liste n'est pas exhaustive. La voie pacifique
+garde la France en vie et prospère, mais ne mène pas à la victoire&nbsp;: on ne gagne pas
+une guerre napoléonienne en signant des traités seulement.
 
 ### La France est-elle jouable ?
 

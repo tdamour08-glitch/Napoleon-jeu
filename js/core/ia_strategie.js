@@ -25,6 +25,8 @@ import {
   conclureAlliance,
   rompreAlliance,
   conclureArmistice,
+  verserSubside,
+  attenteSubside,
 } from './diplomatie.js';
 import { puissance as puissanceAuCombat } from './combat.js';
 import {
@@ -203,9 +205,35 @@ function majOpinions(etat, empire, puissances, equilibre) {
 
 /** Une puissance décide de sa politique pour les quinze jours à venir. */
 function deliberer(etat, empire, equilibre) {
+  distribuerSubsides(etat, empire, equilibre);
   if (chercherPaix(etat, empire, equilibre)) return;
   if (chercherAlliance(etat, empire, equilibre)) return;
   chercherGuerre(etat, empire, equilibre);
+}
+
+/**
+ * Un cabinet riche achète des amitiés : il paie ceux qui combattent déjà son
+ * ennemi, ou ceux qu'il craint de voir se retourner. C'est ainsi que l'or
+ * anglais a financé les coalitions.
+ */
+function distribuerSubsides(etat, empire, equilibre) {
+  if (empire.stocks.or < empire.capacite * 0.45) return;
+  const mesEnnemis = ennemis(etat, empire.id);
+
+  const candidats = Object.values(etat.empires)
+    .filter(
+      (autre) =>
+        autre.vivant &&
+        autre.id !== empire.id &&
+        !sontEnGuerre(etat, empire.id, autre.id) &&
+        attenteSubside(etat, empire.id, autre.id) === 0 &&
+        // Soit il combat déjà notre ennemi, soit c'est un voisin qu'il faut ménager.
+        (mesEnnemis.some((e) => sontEnGuerre(etat, autre.id, e)) ||
+          (autre.id === equilibre.hegemon && sontVoisines(etat, empire.id, autre.id))),
+    )
+    .sort((a, b) => opinion(etat, a.id, empire.id) - opinion(etat, b.id, empire.id));
+
+  if (candidats.length) verserSubside(etat, empire.id, candidats[0].id);
 }
 
 /* ------------------------------------------------------------
@@ -502,8 +530,11 @@ export function repondreAlliance(etat, idBot, idJoueur) {
     return { accepte: false, motif: 'La confiance n\'y est pas.' };
   }
   const equilibre = etat.equilibre ?? { hegemon: null, scores: {} };
-  if (idJoueur === equilibre.hegemon && estime < 45) {
-    return { accepte: false, motif: 'Nul ne veut servir de marchepied à une hégémonie.' };
+  if (idJoueur === equilibre.hegemon && estime < 30) {
+    return {
+      accepte: false,
+      motif: 'Nul ne veut servir de marchepied à une hégémonie — il y faudrait plus d\'égards.',
+    };
   }
   // On soupèse les guerres que cette alliance nous apporterait.
   const fardeau = ennemis(etat, idJoueur)
