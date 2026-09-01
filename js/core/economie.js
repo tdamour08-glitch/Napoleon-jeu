@@ -159,6 +159,11 @@ export function recalculerEconomie(etat) {
     if (malus < 1) {
       for (const r of RESSOURCES) empire.production[r.id] *= malus;
     }
+    // L'instruction publique rend les ateliers plus productifs.
+    const rendement = 1 + effetsPolitiques(empire).production;
+    if (rendement !== 1) {
+      for (const r of RESSOURCES) empire.production[r.id] *= rendement;
+    }
     // Le commerce britannique et l'or des Amériques : bonus de doctrine.
     if (empire.doctrine?.orBonus) empire.production.or *= empire.doctrine.orBonus;
     for (const r of RESSOURCES) {

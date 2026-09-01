@@ -33,17 +33,57 @@ const JOURS_PAR_MOIS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const STOCK_INITIAL = 400;
 
 /**
- * Garnisons de 1805, en milliers d'hommes.
- * Les puissances mineures reçoivent un corps dans leur capitale.
+ * Forces de 1805, arme par arme. À terre en milliers d'hommes, à la mer en
+ * navires. Les compositions disent l'histoire de chaque armée : l'artillerie
+ * de Bonaparte, les cosaques du tsar, la cavalerie prussienne, et surtout la
+ * Royal Navy, qui écrase toutes les autres marines réunies.
  */
 const FORCES_INITIALES = {
-  fra: [['ile_de_france', 40], ['rhenanie', 30], ['lombardie', 25], ['bourgogne', 20]],
-  gbr: [['angleterre', 30], ['irlande', 10], ['bengale', 15]],
-  pru: [['brandebourg', 35], ['silesie', 20]],
-  aut: [['autriche', 35], ['boheme', 20], ['venetie', 20]],
-  rus: [['moscou', 30], ['lituanie', 30], ['ukraine', 20]],
-  esp: [['castille', 25], ['andalousie', 15]],
-  ott: [['constantinople', 30], ['anatolie', 20], ['egypte', 15]],
+  fra: [
+    ['ile_de_france', { infanterie: 26, cavalerie: 8, artillerie: 6 }],
+    ['rhenanie', { infanterie: 20, cavalerie: 6, artillerie: 4 }],
+    ['lombardie', { infanterie: 17, cavalerie: 5, artillerie: 3 }],
+    ['bourgogne', { infanterie: 14, cavalerie: 4, artillerie: 2 }],
+    ['bretagne', { ligne: 10, fregate: 6 }],
+    ['provence', { ligne: 6, fregate: 4 }],
+    ['hollande', { ligne: 4, fregate: 3 }],
+  ],
+  gbr: [
+    ['angleterre', { infanterie: 20, cavalerie: 4, artillerie: 3 }],
+    ['irlande', { infanterie: 8, cavalerie: 1, artillerie: 1 }],
+    ['bengale', { infanterie: 12, cavalerie: 2, artillerie: 1 }],
+    ['angleterre', { ligne: 22, fregate: 16 }],
+    ['ecosse', { ligne: 6, fregate: 6 }],
+  ],
+  pru: [
+    ['brandebourg', { infanterie: 24, cavalerie: 8, artillerie: 5 }],
+    ['silesie', { infanterie: 14, cavalerie: 4, artillerie: 2 }],
+  ],
+  aut: [
+    ['autriche', { infanterie: 24, cavalerie: 7, artillerie: 5 }],
+    ['boheme', { infanterie: 14, cavalerie: 4, artillerie: 2 }],
+    ['venetie', { infanterie: 14, cavalerie: 4, artillerie: 2 }],
+  ],
+  rus: [
+    ['moscou', { infanterie: 20, cavalerie: 6, artillerie: 5 }],
+    ['lituanie', { infanterie: 20, cavalerie: 7, artillerie: 4 }],
+    ['ukraine', { infanterie: 12, cavalerie: 8, artillerie: 2 }],
+    ['saint_petersbourg', { ligne: 5, fregate: 4 }],
+  ],
+  esp: [
+    ['castille', { infanterie: 18, cavalerie: 4, artillerie: 3 }],
+    ['andalousie', { infanterie: 11, cavalerie: 3, artillerie: 1 }],
+    ['andalousie', { ligne: 8, fregate: 5 }],
+  ],
+  ott: [
+    ['constantinople', { infanterie: 20, cavalerie: 8, artillerie: 3 }],
+    ['anatolie', { infanterie: 14, cavalerie: 6, artillerie: 1 }],
+    ['egypte', { infanterie: 10, cavalerie: 4, artillerie: 1 }],
+    ['constantinople', { ligne: 5, fregate: 4 }],
+  ],
+  dan: [['danemark', { infanterie: 8, cavalerie: 2, artillerie: 1 }], ['danemark', { ligne: 4, fregate: 3 }]],
+  sue: [['suede', { infanterie: 8, cavalerie: 2, artillerie: 1 }], ['suede', { ligne: 3, fregate: 3 }]],
+  por: [['portugal', { infanterie: 8, cavalerie: 2, artillerie: 1 }], ['portugal', { ligne: 3, fregate: 2 }]],
 };
 
 /** Guerres déjà engagées au 1er mars 1805. */
@@ -88,7 +128,7 @@ export function creerPartie(idEmpireJoueur, options = {}) {
       souverainete: 0,
       // Gouvernement : taux de l'impôt, politiques décrétées, dette publique.
       tauxImposition: 1,
-      politiques: [],
+      politiques: [...(modele.politiquesInitiales ?? [])],
       dette: 0,
       interets: 0,
       budget: { impots: 0, ressources: 0, administration: 0, armee: 0, politiques: 0, interets: 0 },
@@ -158,22 +198,24 @@ export function creerPartie(idEmpireJoueur, options = {}) {
 /** Place les garnisons de départ et ouvre les guerres déjà déclarées. */
 function installerForcesInitiales(etat) {
   // À forces égales, chaque grande puissance reçoit le même total, réparti
-  // sur ses places fortes historiques.
-  const total = (g) => g.reduce((s, [, e]) => s + e, 0);
-  const moyenne =
-    Object.values(FORCES_INITIALES).reduce((s, g) => s + total(g), 0) /
-    Object.keys(FORCES_INITIALES).length;
+  // sur ses places fortes historiques et dans les mêmes proportions d'armes.
+  const total = (g) => g.reduce((s, [, u]) => s + Object.values(u).reduce((x, y) => x + y, 0), 0);
+  const grandes = ['fra', 'gbr', 'pru', 'aut', 'rus', 'esp', 'ott'];
+  const moyenne = grandes.reduce((s, id) => s + total(FORCES_INITIALES[id]), 0) / grandes.length;
 
-  for (const [idEmpire, garnisonsInitiales] of Object.entries(FORCES_INITIALES)) {
-    const facteur = etat.options.forcesEgales ? moyenne / total(garnisonsInitiales) : 1;
-    const garnisons = garnisonsInitiales.map(([id, e]) => [id, Math.round(e * facteur)]);
-    for (const [idTerritoire, effectif] of garnisons) {
+  for (const [idEmpire, garnisons] of Object.entries(FORCES_INITIALES)) {
+    const facteur =
+      etat.options.forcesEgales && grandes.includes(idEmpire) ? moyenne / total(garnisons) : 1;
+    for (const [idTerritoire, unites] of garnisons) {
       const territoire = etat.carte.territoires[idTerritoire];
       if (!territoire) {
         console.warn(`[etat] Garnison sur une province inconnue : ${idTerritoire}`);
         continue;
       }
-      creerArmeeInitiale(etat, idEmpire, idTerritoire, effectif);
+      const ajustees = Object.fromEntries(
+        Object.entries(unites).map(([type, n]) => [type, Math.max(1, Math.round(n * facteur))]),
+      );
+      creerArmeeInitiale(etat, idEmpire, idTerritoire, ajustees);
     }
   }
 
@@ -183,7 +225,9 @@ function installerForcesInitiales(etat) {
     const capitale = empire.territoires
       .map((id) => etat.carte.territoires[id])
       .find((t) => t.capitale);
-    if (capitale) creerArmeeInitiale(etat, empire.id, capitale.id, 12);
+    if (capitale) {
+      creerArmeeInitiale(etat, empire.id, capitale.id, { infanterie: 9, cavalerie: 2, artillerie: 1 });
+    }
   }
 
   for (const [a, b] of GUERRES_INITIALES) {
@@ -195,16 +239,20 @@ function installerForcesInitiales(etat) {
 }
 
 /**
- * Création directe d'une armée, sans passer par core/armees.js :
+ * Création directe d'un corps, sans passer par core/armees.js :
  * ce module ne doit dépendre de rien pour rester en amont du reste.
  */
-function creerArmeeInitiale(etat, idEmpire, idTerritoire, effectif) {
+function creerArmeeInitiale(etat, idEmpire, idTerritoire, unites) {
   const empire = etat.empires[idEmpire];
   const id = `a${etat.prochainIdArmee++}`;
+  const domaine = 'ligne' in unites || 'fregate' in unites ? 'mer' : 'terre';
+  const base = domaine === 'mer' ? { ligne: 0, fregate: 0 } : { infanterie: 0, cavalerie: 0, artillerie: 0 };
   etat.armees[id] = {
     id,
     empire: idEmpire,
-    effectif,
+    domaine,
+    unites: { ...base, ...unites },
+    effectif: Object.values(unites).reduce((s, v) => s + v, 0),
     motivation: empire.doctrine.moralInitial,
     lieu: idTerritoire,
     route: null,

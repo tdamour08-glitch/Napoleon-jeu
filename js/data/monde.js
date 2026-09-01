@@ -157,7 +157,26 @@ export const PROVINCES_EUROPEENNES = new Set([
    Liaisons maritimes ajoutées aux frontières terrestres.
    ------------------------------------------------------------ */
 export const LIAISONS_MARITIMES = [
+  // Une province qui figure ici est un port : elle peut armer des navires,
+  // et les escadres ne se déplacent que le long de ces routes.
   ['angleterre', 'normandie'],
+  ['angleterre', 'bretagne'],
+  ['bretagne', 'irlande'],
+  ['bretagne', 'portugal'],
+  ['portugal', 'andalousie'],
+  ['andalousie', 'catalogne'],
+  ['catalogne', 'provence'],
+  ['provence', 'toscane'],
+  ['toscane', 'naples'],
+  ['venetie', 'naples'],
+  ['venetie', 'illyrie'],
+  ['egypte', 'arabie'],
+  ['hollande', 'hanovre'],
+  ['pomeranie', 'prusse_orientale'],
+  ['canada', 'irlande'],
+  ['etats_unis', 'canada'],
+  ['bresil', 'afrique_ouest'],
+  ['cap', 'indes_orientales'],
   ['angleterre', 'flandre'],
   ['angleterre', 'hollande'],
   ['angleterre', 'irlande'],

@@ -1,69 +1,80 @@
 /* ============================================================
-   armees.js — levée, marche, entretien et motivation des troupes
+   armees.js — levée, marche, entretien et motivation des corps
    ------------------------------------------------------------
-   Une armée appartient à une puissance, occupe une province ou
-   marche entre deux provinces. Sa MOTIVATION monte avec les
-   victoires et tombe avec les défaites, les longues marches en
-   pays ennemi et les pénuries. Elle pèse sur la puissance au
-   combat et sur la vitesse de marche.
+   Un corps n'est plus un bloc d'hommes : c'est une COMPOSITION
+   d'armes — infanterie, cavalerie, artillerie à terre ;
+   vaisseaux de ligne et frégates à la mer. Sa vitesse est celle
+   de son élément le plus lent, sa force dépend de ce qu'il a en
+   face (cf. data/unites.js), et son entretien de ce qu'il aligne.
 
-   Invariant : une puissance n'a jamais deux armées à l'arrêt
-   dans la même province — elles fusionnent à l'arrivée.
+   Sa MOTIVATION monte avec les victoires et tombe avec les
+   défaites, les longues marches en pays ennemi et les pénuries.
    ============================================================ */
 
 import { controleur, journaliser } from './etat.js';
 import { avecArticle } from '../data/langue.js';
 import { effetsPolitiques } from './politiques.js';
+import {
+  UNITES,
+  TAILLE_REGIMENT,
+  RESERVES_REGIMENT,
+  compositionVide,
+  totalUnites,
+  vitesseComposition,
+  entretienComposition,
+  typesDuDomaine,
+} from '../data/unites.js';
 
-/** Effectif d'un corps nouvellement levé, en milliers d'hommes. */
-export const TAILLE_CORPS = 10;
-
-/**
- * Effectif au-delà duquel deux corps ne fusionnent plus. Sans ce plafond,
- * chaque puissance finit par ne plus manœuvrer qu'une seule masse.
- */
+/** Au-delà de ce total, deux corps ne fusionnent plus d'eux-mêmes. */
 export const TAILLE_MAX_CORPS = 60;
 
-/** Coût d'une levée. */
-export const COUT_LEVEE = { or: 130, fer: 90, bois: 60 };
-export const RESERVES_PAR_CORPS = TAILLE_CORPS;
-/** Durée d'une levée, en jours. */
-export const DUREE_LEVEE = 20;
-
-/** Entretien quotidien, par millier d'hommes. */
-const ENTRETIEN = { or: 0.05, bois: 0.03, fer: 0.02, eau: 0.04 };
-
-/** Effectif en deçà duquel une armée est dissoute. */
+/** Effectif en deçà duquel un corps est dissous. */
 const EFFECTIF_MINIMAL = 0.6;
 
-/** Motivation sous laquelle une armée engagée rompt le combat. */
+/** Motivation sous laquelle un corps engagé rompt le combat. */
 export const SEUIL_DEROUTE = 22;
 
 const MOTIVATION_MAX = 100;
 
 /* ------------------------------------------------------------
-   Création et destruction
+   Création et comptage
    ------------------------------------------------------------ */
 
-export function creerArmee(etat, idEmpire, idTerritoire, effectif) {
+/** Recalcule l'effectif total d'un corps depuis sa composition. */
+export function majEffectif(armee) {
+  armee.effectif = totalUnites(armee.unites);
+  return armee.effectif;
+}
+
+/**
+ * Crée un corps, ou renforce un corps ami déjà sur place s'il reste
+ * sous le plafond de concentration.
+ */
+export function creerArmee(etat, idEmpire, idTerritoire, unites, domaine = 'terre') {
   const empire = etat.empires[idEmpire];
-  const accueillante = armeesDans(etat, idTerritoire).find(
-    (a) => a.empire === idEmpire && a.effectif + effectif <= TAILLE_MAX_CORPS,
+  const apport = totalUnites(unites);
+
+  const accueillant = armeesDans(etat, idTerritoire).find(
+    (a) => a.empire === idEmpire && a.domaine === domaine && a.effectif + apport <= TAILLE_MAX_CORPS,
   );
-  if (accueillante) {
-    fusionner(accueillante, { effectif, motivation: empire.doctrine.moralInitial });
-    return accueillante;
+  if (accueillant) {
+    fusionnerDans(accueillant, { unites, motivation: empire.doctrine.moralInitial, effectif: apport });
+    return accueillant;
   }
+
   const armee = {
     id: `a${etat.prochainIdArmee++}`,
     empire: idEmpire,
-    effectif,
+    domaine,
+    unites: { ...compositionVide(domaine), ...unites },
+    effectif: 0,
     motivation: empire.doctrine.moralInitial,
     lieu: idTerritoire,
     route: null,
     enBataille: false,
     joursImmobile: 0,
   };
+  majEffectif(armee);
   etat.armees[armee.id] = armee;
   return armee;
 }
@@ -73,56 +84,134 @@ export function dissoudre(etat, armee) {
   if (etat.selectionArmee === armee.id) etat.selectionArmee = null;
 }
 
-/** Armées à l'arrêt d'une puissance dans une province. */
-export function armeesDe(etat, idEmpire, idTerritoire) {
-  return armeesDans(etat, idTerritoire).filter((a) => a.empire === idEmpire);
-}
-
-/** Toutes les armées présentes dans une province (marches exclues). */
+/** Corps à l'arrêt présents dans une province. */
 export function armeesDans(etat, idTerritoire) {
   return Object.values(etat.armees).filter((a) => a.lieu === idTerritoire && !a.route);
 }
 
-/** Deux armées n'en font plus qu'une ; la motivation suit l'effectif. */
-function fusionner(cible, apport) {
+/** Corps d'une puissance donnée dans une province. */
+export function armeesDe(etat, idEmpire, idTerritoire) {
+  return armeesDans(etat, idTerritoire).filter((a) => a.empire === idEmpire);
+}
+
+/** Verse un apport dans un corps ; la motivation suit les effectifs. */
+function fusionnerDans(cible, apport) {
   const total = cible.effectif + apport.effectif;
-  cible.motivation =
-    (cible.motivation * cible.effectif + apport.motivation * apport.effectif) / total;
-  cible.effectif = total;
+  if (total > 0) {
+    cible.motivation = (cible.motivation * cible.effectif + apport.motivation * apport.effectif) / total;
+  }
+  for (const [type, nombre] of Object.entries(apport.unites)) {
+    cible.unites[type] = (cible.unites[type] ?? 0) + nombre;
+  }
+  majEffectif(cible);
 }
 
 /* ------------------------------------------------------------
-   Levée de troupes
+   Fusion et division, à la main
    ------------------------------------------------------------ */
 
-/** Peut-on lever un corps ici ? Renvoie un motif si non. */
-export function verifierLevee(etat, territoire) {
+/** Corps avec lesquels celui-ci peut fusionner ici et maintenant. */
+export function fusionsPossibles(etat, armee) {
+  if (armee.route) return [];
+  return armeesDans(etat, armee.lieu).filter(
+    (autre) =>
+      autre.id !== armee.id &&
+      autre.empire === armee.empire &&
+      autre.domaine === armee.domaine &&
+      !autre.enBataille &&
+      !armee.enBataille,
+  );
+}
+
+/** Réunit deux corps en un seul. */
+export function fusionner(etat, armee, autre) {
+  if (!fusionsPossibles(etat, armee).some((a) => a.id === autre.id)) return false;
+  fusionnerDans(armee, autre);
+  dissoudre(etat, autre);
+  return true;
+}
+
+/** Sépare un corps en deux moitiés, sur place. */
+export function diviser(etat, armee) {
+  if (armee.enBataille || armee.route) return null;
+  if (armee.effectif < 2 * EFFECTIF_MINIMAL) return null;
+
+  const moitie = compositionVide(armee.domaine);
+  for (const type of Object.keys(armee.unites)) {
+    const part = Math.round((armee.unites[type] / 2) * 10) / 10;
+    moitie[type] = part;
+    armee.unites[type] -= part;
+  }
+  majEffectif(armee);
+  if (totalUnites(moitie) < EFFECTIF_MINIMAL) {
+    fusionnerDans(armee, { unites: moitie, motivation: armee.motivation, effectif: totalUnites(moitie) });
+    return null;
+  }
+
+  const detachement = {
+    id: `a${etat.prochainIdArmee++}`,
+    empire: armee.empire,
+    domaine: armee.domaine,
+    unites: moitie,
+    effectif: 0,
+    motivation: armee.motivation,
+    lieu: armee.lieu,
+    route: null,
+    enBataille: false,
+    joursImmobile: 0,
+  };
+  majEffectif(detachement);
+  etat.armees[detachement.id] = detachement;
+  return detachement;
+}
+
+/* ------------------------------------------------------------
+   Levée de troupes et constructions navales
+   ------------------------------------------------------------ */
+
+/** Une province est un port si elle ouvre sur au moins une route maritime. */
+export function estPort(territoire) {
+  return territoire.voisinsMaritimes.length > 0;
+}
+
+/** Peut-on lever cette arme ici ? Renvoie un motif si non. */
+export function verifierLevee(etat, territoire, type = 'infanterie') {
+  const modele = UNITES[type];
+  if (!modele) return { possible: false, motif: 'Arme inconnue.' };
   const empire = etat.empires[controleur(territoire)];
   if (!empire) return { possible: false, motif: 'Province sans maître.' };
   if (territoire.occupant && territoire.occupant !== territoire.maitre) {
     return { possible: false, motif: 'On ne lève pas de troupes en pays occupé.' };
   }
   if (territoire.levee) return { possible: false, motif: 'Une levée est déjà en cours ici.' };
-  if (empire.reserves < RESERVES_PAR_CORPS) {
+  if (modele.domaine === 'mer' && !estPort(territoire)) {
+    return { possible: false, motif: 'Cette province n\'a pas de port.' };
+  }
+  if (empire.reserves < RESERVES_REGIMENT[type]) {
     return { possible: false, motif: 'Les réserves d\'hommes sont épuisées.' };
   }
-  for (const [ressource, montant] of Object.entries(COUT_LEVEE)) {
-    if (empire.stocks[ressource] < montant) {
-      return { possible: false, motif: 'Le trésor ne suit pas.' };
-    }
+  for (const [ressource, montant] of Object.entries(modele.cout)) {
+    if (empire.stocks[ressource] < montant) return { possible: false, motif: 'Le trésor ne suit pas.' };
   }
   return { possible: true };
 }
 
-export function lancerLevee(etat, territoire) {
-  const verdict = verifierLevee(etat, territoire);
+export function lancerLevee(etat, territoire, type = 'infanterie') {
+  const verdict = verifierLevee(etat, territoire, type);
   if (!verdict.possible) return verdict;
+
+  const modele = UNITES[type];
   const empire = etat.empires[controleur(territoire)];
-  for (const [ressource, montant] of Object.entries(COUT_LEVEE)) empire.stocks[ressource] -= montant;
-  empire.reserves -= RESERVES_PAR_CORPS;
-  territoire.levee = { restant: DUREE_LEVEE, duree: DUREE_LEVEE };
+  for (const [ressource, montant] of Object.entries(modele.cout)) empire.stocks[ressource] -= montant;
+  empire.reserves -= RESERVES_REGIMENT[type];
+  territoire.levee = { type, restant: modele.duree, duree: modele.duree };
+
   if (empire.estJoueur) {
-    journaliser(etat, `Levée ordonnée en <strong>${territoire.nom}</strong> (${DUREE_LEVEE} jours).`);
+    journaliser(
+      etat,
+      `${modele.domaine === 'mer' ? 'Chantier naval ouvert' : 'Levée ordonnée'} en ` +
+        `<strong>${territoire.nom}</strong> — ${modele.nom.toLowerCase()}, ${modele.duree} jours.`,
+    );
   }
   return { possible: true };
 }
@@ -131,18 +220,67 @@ function avancerLevee(etat, territoire) {
   if (!territoire.levee) return;
   territoire.levee.restant -= 1;
   if (territoire.levee.restant > 0) return;
+
+  const { type } = territoire.levee;
   territoire.levee = null;
   const empire = etat.empires[controleur(territoire)];
   if (!empire) return;
-  creerArmee(etat, empire.id, territoire.id, TAILLE_CORPS);
+
+  const modele = UNITES[type];
+  const unites = compositionVide(modele.domaine);
+  unites[type] = TAILLE_REGIMENT[type];
+  creerArmee(etat, empire.id, territoire.id, unites, modele.domaine);
+
   if (empire.estJoueur) {
-    journaliser(etat, `Un corps de ${TAILLE_CORPS} 000 hommes se rassemble en <strong>${territoire.nom}</strong>.`);
+    journaliser(etat, `${modele.nom} : un renfort rejoint <strong>${territoire.nom}</strong>.`);
   }
+}
+
+/* ------------------------------------------------------------
+   Maîtrise de la mer
+   ------------------------------------------------------------ */
+
+/** Puissance navale d'une puissance dans une province portuaire. */
+function forceNavale(etat, idEmpire, idTerritoire) {
+  return armeesDans(etat, idTerritoire)
+    .filter((a) => a.domaine === 'mer' && a.empire === idEmpire)
+    .reduce((s, a) => s + a.effectif, 0);
+}
+
+/**
+ * Une armée de terre ne franchit un bras de mer que si sa marine tient le
+ * passage : une escadre à l'un des deux bords, et aucune escadre ennemie plus
+ * forte. C'est ce qui met l'Angleterre à l'abri d'une invasion improvisée.
+ */
+export function passageMaritimeOuvert(etat, armee, depuis, vers) {
+  const nous = forceNavale(etat, armee.empire, depuis) + forceNavale(etat, armee.empire, vers);
+  if (nous <= 0) return false;
+
+  let ennemi = 0;
+  for (const bord of [depuis, vers]) {
+    for (const flotte of armeesDans(etat, bord)) {
+      if (flotte.domaine !== 'mer') continue;
+      if (flotte.empire === armee.empire) continue;
+      if (!etat.relations) continue;
+      const cle = flotte.empire < armee.empire ? `${flotte.empire}|${armee.empire}` : `${armee.empire}|${flotte.empire}`;
+      if (etat.relations[cle] === 'guerre') ennemi += flotte.effectif;
+    }
+  }
+  return nous >= ennemi;
 }
 
 /* ------------------------------------------------------------
    Marche
    ------------------------------------------------------------ */
+
+/** Une étape est-elle praticable pour ce corps ? */
+function etapeAutorisee(etat, armee, depuis, vers) {
+  const a = etat.carte.territoires[depuis];
+  const maritime = a.voisinsMaritimes.includes(vers);
+  if (armee.domaine === 'mer') return maritime; // une escadre ne remonte pas les terres
+  if (!maritime) return true;
+  return passageMaritimeOuvert(etat, armee, depuis, vers);
+}
 
 /** Durée d'une étape, en jours, entre deux provinces voisines. */
 export function dureeEtape(etat, armee, depuis, vers) {
@@ -150,17 +288,23 @@ export function dureeEtape(etat, armee, depuis, vers) {
   const b = etat.carte.territoires[vers];
   const distance = Math.hypot(b.centre[0] - a.centre[0], b.centre[1] - a.centre[1]);
   let jours = Math.max(3, distance / 11);
-  if (a.voisinsMaritimes.includes(vers)) jours *= 3.2; // rassembler les transports, traverser, débarquer
-  if (b.terrain === 'montagne') jours *= 1.4;
-  if (b.terrain === 'jungle' || b.terrain === 'toundra') jours *= 1.25;
-  // Des troupes motivées marchent plus vite ; l'élan est un avantage discret.
+
+  if (a.voisinsMaritimes.includes(vers) && armee.domaine === 'terre') jours *= 3.2;
+  if (armee.domaine === 'terre') {
+    if (b.terrain === 'montagne') jours *= 1.4;
+    if (b.terrain === 'jungle' || b.terrain === 'toundra') jours *= 1.25;
+  }
+
+  // Vitesse propre à la composition, motivation et doctrine.
+  jours /= vitesseComposition(armee.unites);
   const empire = etat.empires[armee.empire];
   jours /= 0.75 + (armee.motivation / MOTIVATION_MAX) * 0.35 + (empire.doctrine.marche ?? 1) - 1;
   return Math.max(2, jours);
 }
 
 /**
- * Plus court chemin en jours de marche (Dijkstra sur le graphe des provinces).
+ * Plus court chemin en jours de marche (Dijkstra sur le graphe des provinces),
+ * en n'empruntant que les étapes praticables par ce corps.
  * @returns {string[]|null} suite de provinces, départ exclu
  */
 export function tracerRoute(etat, armee, depuis, vers) {
@@ -185,6 +329,7 @@ export function tracerRoute(etat, armee, depuis, vers) {
 
     for (const voisin of etat.carte.territoires[courant].voisins) {
       if (!aVisiter.has(voisin)) continue;
+      if (!etapeAutorisee(etat, armee, courant, voisin)) continue;
       const cout = meilleur + dureeEtape(etat, armee, courant, voisin);
       if (cout < (distances[voisin] ?? Infinity)) {
         distances[voisin] = cout;
@@ -224,14 +369,13 @@ export function annulerMarche(armee) {
   armee.route = null;
 }
 
-/** Fait avancer une armée d'un jour. */
 function avancerMarche(etat, armee) {
   const route = armee.route;
   if (!route) {
     armee.joursImmobile += 1;
     return;
   }
-  if (armee.enBataille) return; // on ne quitte pas le champ de bataille en marchant
+  if (armee.enBataille) return;
 
   route.progression += 1 / route.duree;
   if (route.progression < 1) return;
@@ -240,8 +384,8 @@ function avancerMarche(etat, armee) {
   armee.lieu = arrivee;
   route.etape += 1;
 
-  // Un débarquement éprouve les troupes : sans marine dédiée, la traversée se paie.
-  if (etat.carte.territoires[route.depuis].voisinsMaritimes.includes(arrivee)) {
+  // Un débarquement éprouve les troupes.
+  if (armee.domaine === 'terre' && etat.carte.territoires[route.depuis].voisinsMaritimes.includes(arrivee)) {
     armee.motivation = Math.max(0, armee.motivation - 10);
   }
 
@@ -259,46 +403,17 @@ function avancerMarche(etat, armee) {
 /** À l'arrivée, les corps amis se regroupent tant que le plafond le permet. */
 function absorberArmeesAmies(etat, armee) {
   for (const autre of armeesDans(etat, armee.lieu)) {
-    if (autre === armee || autre.empire !== armee.empire) continue;
+    if (autre === armee || autre.empire !== armee.empire || autre.domaine !== armee.domaine) continue;
     if (armee.effectif + autre.effectif > TAILLE_MAX_CORPS) continue;
-    fusionner(armee, autre);
+    fusionnerDans(armee, autre);
     dissoudre(etat, autre);
   }
-}
-
-/** Détache la moitié d'un corps et l'envoie ailleurs. */
-export function detacher(etat, armee, destination) {
-  if (armee.effectif < 2 * EFFECTIF_MINIMAL) return null;
-  const moitie = Math.round((armee.effectif / 2) * 10) / 10;
-  armee.effectif -= moitie;
-  const detachement = {
-    id: `a${etat.prochainIdArmee++}`,
-    empire: armee.empire,
-    effectif: moitie,
-    motivation: armee.motivation,
-    lieu: armee.lieu,
-    route: null,
-    enBataille: false,
-    joursImmobile: 0,
-  };
-  etat.armees[detachement.id] = detachement;
-  if (!ordonnerMarche(etat, detachement, destination)) {
-    // Destination inaccessible : le détachement rejoint le corps principal.
-    armee.effectif += moitie;
-    delete etat.armees[detachement.id];
-    return null;
-  }
-  return detachement;
 }
 
 /* ------------------------------------------------------------
    Motivation
    ------------------------------------------------------------ */
 
-/**
- * Fait dériver la motivation d'une armée au repos ou en marche.
- * Les combats la font bouger bien plus vite (cf. combat.js).
- */
 function faireEvoluerMotivation(etat, armee) {
   if (armee.enBataille) return;
   const empire = etat.empires[armee.empire];
@@ -307,13 +422,12 @@ function faireEvoluerMotivation(etat, armee) {
 
   let cible = empire.doctrine.moralInitial;
   if (chezSoi) cible += territoire.moral * 0.2;
-  else cible -= 12; // vivre sur le pays use les troupes
+  else cible -= 12;
   if (armee.route) cible -= 6;
   if (empire.penuries.or) cible -= 15;
   if (empire.penuries.eau) cible -= 12;
   cible = Math.max(0, Math.min(MOTIVATION_MAX, cible));
 
-  // La ténacité russe ralentit la chute ; l'élan français accélère la reprise.
   const ecart = cible - armee.motivation;
   let pas = 0.4;
   if (ecart < 0) pas /= empire.doctrine.tenacite ?? 1;
@@ -321,14 +435,12 @@ function faireEvoluerMotivation(etat, armee) {
   armee.motivation += Math.sign(ecart) * Math.min(Math.abs(ecart), pas);
 }
 
-/** Récompense de motivation après une victoire. */
 export function recompenserVictoire(etat, armee, ampleur = 1) {
   const empire = etat.empires[armee.empire];
   const gain = 9 * ampleur * (empire.doctrine.gainMoralVictoire ?? 1);
   armee.motivation = Math.min(MOTIVATION_MAX, armee.motivation + gain);
 }
 
-/** Pénalité de motivation après une défaite. */
 export function punirDefaite(armee, ampleur = 1) {
   armee.motivation = Math.max(0, armee.motivation - 12 * ampleur);
 }
@@ -337,26 +449,24 @@ export function punirDefaite(armee, ampleur = 1) {
    Journée militaire
    ------------------------------------------------------------ */
 
-/** Entretien quotidien des armées d'une puissance, par ressource. */
+/** Entretien quotidien des forces d'une puissance, par ressource. */
 export function entretienMilitaire(etat, idEmpire) {
   const total = { or: 0, bois: 0, fer: 0, eau: 0, charbon: 0 };
   for (const armee of Object.values(etat.armees)) {
     if (armee.empire !== idEmpire) continue;
-    for (const [ressource, taux] of Object.entries(ENTRETIEN)) {
-      total[ressource] += taux * armee.effectif;
-    }
+    const part = entretienComposition(armee.unites);
+    for (const ressource of Object.keys(total)) total[ressource] += part[ressource] ?? 0;
   }
   return total;
 }
 
-/** Régénération des réserves d'hommes. */
 export function regenererReserves(etat) {
   for (const empire of Object.values(etat.empires)) {
     if (!empire.vivant) continue;
     let apport = 0;
     for (const id of empire.territoires) {
       const t = etat.carte.territoires[id];
-      if (t.occupant && t.occupant !== t.maitre) continue; // un pays occupé ne fournit pas de recrues
+      if (t.occupant && t.occupant !== t.maitre) continue;
       apport += t.population * 0.05 * (0.5 + t.moral / 200);
     }
     apport *= (empire.doctrine.reserves ?? 1) * (1 + effetsPolitiques(empire).reserves);
@@ -364,12 +474,11 @@ export function regenererReserves(etat) {
   }
 }
 
-/** Plafond des réserves : un empire ne mobilise pas au-delà de sa population. */
 export function calculerReservesMax(etat, empire) {
   let population = 0;
   for (const id of empire.territoires) {
     const t = etat.carte.territoires[id];
-    if (t.occupant && t.occupant !== t.maitre) continue; // un pays occupé ne fournit pas de recrues
+    if (t.occupant && t.occupant !== t.maitre) continue;
     population += t.population;
   }
   return Math.round(population * 4 * (empire.doctrine.reserves ?? 1) * (1 + effetsPolitiques(empire).reserves));
@@ -385,6 +494,7 @@ export function appliquerJourMilitaire(etat) {
   }
 
   for (const armee of Object.values(etat.armees)) {
+    majEffectif(armee);
     if (armee.effectif < EFFECTIF_MINIMAL) {
       const empire = etat.empires[armee.empire];
       if (empire?.estJoueur) {
@@ -394,14 +504,15 @@ export function appliquerJourMilitaire(etat) {
     }
   }
 
-  // Une armée sans solde fond : les hommes désertent.
+  // Sans solde, les hommes désertent et les équipages débarquent.
   for (const empire of Object.values(etat.empires)) {
     if (!empire.penuries.or) continue;
     for (const armee of Object.values(etat.armees)) {
       if (armee.empire !== empire.id) continue;
-      armee.effectif *= 0.995;
+      for (const type of Object.keys(armee.unites)) armee.unites[type] *= 0.995;
+      majEffectif(armee);
     }
   }
 }
 
-export { avecArticle };
+export { avecArticle, typesDuDomaine, UNITES, TAILLE_REGIMENT, RESERVES_REGIMENT };

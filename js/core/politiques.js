@@ -27,36 +27,37 @@ export const POLITIQUES = [
     id: 'sante',
     nom: 'Hospices et hygiène',
     resume: 'Fait reculer la mortalité. La population croît beaucoup plus vite.',
-    cout: { or: 0.09, eau: 0.06 },
+    cout: { or: 0.05, eau: 0.05 },
     effets: { croissance: 0.6, plafond: 0.6 },
   },
   {
     id: 'instruction',
     nom: 'Écoles et académies',
     resume: 'Des ingénieurs et des contremaîtres : les chantiers avancent plus vite.',
-    cout: { or: 0.08, bois: 0.04 },
-    effets: { chantiers: 0.3 },
+    cout: { or: 0.045, bois: 0.04 },
+    // Ingénieurs et manufactures : l'instruction finit par se payer elle-même.
+    effets: { chantiers: 0.3, production: 0.08 },
   },
   {
     id: 'travaux',
     nom: 'Grands travaux',
     resume: 'Routes, canaux et greniers. Le peuple y gagne en confiance.',
-    cout: { or: 0.07, bois: 0.06, fer: 0.04 },
+    cout: { or: 0.04, bois: 0.05, fer: 0.04 },
     effets: { moral: 9 },
   },
   {
     id: 'conscription',
     nom: 'Conscription générale',
     resume: 'La nation entière est mobilisable — et le sait. Les réserves gonflent, le moral souffre.',
-    cout: { or: 0.05 },
+    cout: { or: 0.03 },
     effets: { reserves: 0.55, moral: -11, croissance: -0.25, plafond: -0.3 },
   },
   {
     id: 'abolition',
     nom: 'Abolition des privilèges',
     resume: 'Les terres circulent, les familles s\'agrandissent. Les nobles ne paient plus la cour.',
-    cout: { or: 0.06 },
-    effets: { croissance: 0.35, moral: 6, impot: -0.12, plafond: 0.4 },
+    cout: { or: 0.03 },
+    effets: { croissance: 0.35, moral: 6, impot: -0.08, plafond: 0.4 },
   },
 ];
 
@@ -64,7 +65,7 @@ export const POLITIQUES_PAR_ID = Object.fromEntries(POLITIQUES.map((p) => [p.id,
 
 /** Somme des effets des politiques actives d'un empire. */
 export function effetsPolitiques(empire) {
-  const total = { croissance: 0, moral: 0, reserves: 0, chantiers: 0, impot: 0, plafond: 0 };
+  const total = { croissance: 0, moral: 0, reserves: 0, chantiers: 0, impot: 0, plafond: 0, production: 0 };
   if (!empire) return total;
   for (const id of empire.politiques) {
     const politique = POLITIQUES_PAR_ID[id];
@@ -134,7 +135,8 @@ const PLAFOND_CREDIT = 0.8;
 /** Ce que l'État peut encore emprunter. */
 export function plafondEmprunt(empire) {
   const revenuAnnuel = Math.max(60, empire.production.or * 365);
-  return revenuAnnuel * PLAFOND_CREDIT;
+  // Une place financière solide emprunte davantage et moins cher.
+  return revenuAnnuel * PLAFOND_CREDIT * (empire.doctrine?.credit ?? 1);
 }
 
 /**
@@ -181,7 +183,7 @@ export function servirLaDette(empire) {
     empire.interets = 0;
     return;
   }
-  empire.interets = empire.dette * TAUX_INTERET;
+  empire.interets = (empire.dette * TAUX_INTERET) / (empire.doctrine?.credit ?? 1);
   empire.dette += empire.interets;
 }
 

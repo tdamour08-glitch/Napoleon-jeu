@@ -13,13 +13,8 @@ import {
   GUERRE,
   ALLIANCE,
 } from '../core/diplomatie.js';
-import {
-  armeesDans,
-  verifierLevee,
-  COUT_LEVEE,
-  DUREE_LEVEE,
-  TAILLE_CORPS,
-} from '../core/armees.js';
+import { armeesDans, verifierLevee, estPort, fusionsPossibles } from '../core/armees.js';
+import { UNITES, TAILLE_REGIMENT, decrireComposition } from '../data/unites.js';
 import { couleurMotivation } from '../render/rendu.js';
 import { partEuropeenne } from '../core/traites.js';
 import {
@@ -114,7 +109,7 @@ export class Interface {
         case 'developper':
           return this.actions.developper(this.etat.selection);
         case 'lever':
-          return this.actions.lever(this.etat.selection);
+          return this.actions.lever(this.etat.selection, cible.dataset.type);
         case 'guerre':
           return this.actions.declarerGuerre(cible.dataset.empire);
         default:
@@ -127,6 +122,8 @@ export class Interface {
       if (!cible || cible.disabled) return;
       if (cible.dataset.action === 'fermer') this.actions.selectionnerArmee(null);
       if (cible.dataset.action === 'halte') this.actions.faireHalte(this.etat.selectionArmee);
+      if (cible.dataset.action === 'diviser') this.actions.diviser(this.etat.selectionArmee);
+      if (cible.dataset.action === 'fusionner') this.actions.fusionner(this.etat.selectionArmee);
     });
 
     this.el.panneauDiplomatie.addEventListener('click', (ev) => {
@@ -323,7 +320,7 @@ export class Interface {
       t.occupant ?? '-',
       this.etat.selectionArmee ?? '-',
       armeesDans(this.etat, id)
-        .map((a) => `${a.id}:${Math.round(a.effectif)}:${Math.round(a.motivation)}`)
+        .map((a) => `${a.id}:${decrireComposition(a.unites)}:${Math.round(a.motivation)}`)
         .join(','),
       sontEnGuerre(this.etat, this.etat.joueur, controleur(t)) ? 'g' : 'p',
     ].join('|');
@@ -403,42 +400,47 @@ export class Interface {
 
   }
 
-  /** Bloc « levée » du panneau de province. */
+  /** Bloc « levée » du panneau de province : une arme par bouton. */
   blocLevee(t) {
     if (t.levee) {
       const avancement = 1 - t.levee.restant / t.levee.duree;
       return `
         <div class="bloc">
-          <h3>Levée en cours</h3>
-          <div class="paire"><span>Rassemblement</span><span>${t.levee.restant} jours</span></div>
+          <h3>${UNITES[t.levee.type].domaine === 'mer' ? 'Chantier naval' : 'Levée en cours'}</h3>
+          <div class="paire"><span>${UNITES[t.levee.type].nom}</span><span>${t.levee.restant} jours</span></div>
           <div class="progression"><i style="width:${(avancement * 100).toFixed(1)}%"></i></div>
         </div>`;
     }
 
-    const verdict = verifierLevee(this.etat, t);
     const empire = this.etat.empires[controleur(t)];
-    const detail = Object.entries(COUT_LEVEE)
-      .map(([ressource, montant]) => {
-        const r = RESSOURCES.find((res) => res.id === ressource);
-        const manque = empire.stocks[ressource] < montant;
-        return `<span class="${manque ? 'insuffisant' : ''}">
-                  <span class="pastille" style="background:${r.couleur}"></span>${montant}
-                </span>`;
+    const types = ['infanterie', 'cavalerie', 'artillerie', ...(estPort(t) ? ['ligne', 'fregate'] : [])];
+    const boutons = types
+      .map((type) => {
+        const modele = UNITES[type];
+        const verdict = verifierLevee(this.etat, t, type);
+        const prix = Object.entries(modele.cout)
+          .map(([r, montant]) => {
+            const res = RESSOURCES.find((x) => x.id === r);
+            const manque = empire.stocks[r] < montant;
+            return `${manque ? '⚠ ' : ''}${res.nom} ${montant}`;
+          })
+          .join(' · ');
+        return `
+          <button class="bouton-arme ${verdict.possible ? '' : 'refuse'}"
+                  data-action="lever" data-type="${type}" ${verdict.possible ? '' : 'disabled'}
+                  title="${prix} — ${modele.duree} jours&#10;${modele.resume}">
+            <span class="arme-nom">${modele.nom}</span>
+            <span class="arme-detail">${TAILLE_REGIMENT[type]} · ${modele.duree} j</span>
+          </button>`;
       })
       .join('');
 
+    const motif = verifierLevee(this.etat, t, 'infanterie');
     return `
       <div class="bloc">
-        <h3>Levée</h3>
-        <div class="cout-chantier">
-          ${detail}
-          <span class="${empire.reserves < TAILLE_CORPS ? 'insuffisant' : ''}">${TAILLE_CORPS} 000 hommes</span>
-          <span style="margin-left:auto">${DUREE_LEVEE} j</span>
-        </div>
-        <button class="action-levee action-chantier" data-action="lever" ${verdict.possible ? '' : 'disabled'}>
-          Lever un corps
-        </button>
-        ${verdict.possible ? '' : `<p class="motif-chantier">${verdict.motif}</p>`}
+        <h3>Lever des troupes</h3>
+        <div class="grille-armes">${boutons}</div>
+        ${motif.possible ? '' : `<p class="motif-chantier">${motif.motif}</p>`}
       </div>`;
   }
 
@@ -451,10 +453,11 @@ export class Interface {
         const empire = this.etat.empires[a.empire];
         const etat = a.enBataille ? 'au combat' : a.route ? 'en marche' : 'au repos';
         return `
-          <div class="ligne-corps ${this.etat.selectionArmee === a.id ? 'active' : ''}" data-armee="${a.id}">
+          <div class="ligne-corps ${this.etat.selectionArmee === a.id ? 'active' : ''}" data-armee="${a.id}"
+               title="${etat}">
             <span class="pastille" style="background:${empire.couleur}"></span>
-            <span class="effectif">${Math.round(a.effectif)} 000</span>
-            <span class="etat">${etat} · moral ${Math.round(a.motivation)}</span>
+            <span class="effectif">${decrireComposition(a.unites)}</span>
+            <span class="etat">moral ${Math.round(a.motivation)}</span>
           </div>`;
       })
       .join('');
@@ -606,6 +609,7 @@ export class Interface {
     }
     const signature = [
       armee.id,
+      decrireComposition(armee.unites),
       Math.round(armee.effectif * 10),
       Math.round(armee.motivation),
       armee.lieu,
@@ -639,10 +643,19 @@ export class Interface {
     panneau.classList.remove('cache');
     panneau.innerHTML = `
       <button class="fermer-panneau" data-action="fermer" title="Fermer (Échap)">×</button>
-      <h2>Corps de ${Math.round(armee.effectif)} 000 hommes</h2>
+      <h2>${armee.domaine === 'mer' ? `Escadre de ${Math.round(armee.effectif)} navires`
+                                     : `Corps de ${Math.round(armee.effectif)} 000 hommes`}</h2>
       <p class="sous-titre-panneau">
         <span class="pastille" style="background:${empire.couleur}"></span>${empire.nom}
       </p>
+
+      <div class="bloc">
+        <h3>Composition</h3>
+        ${Object.entries(armee.unites)
+          .filter(([, n]) => n > 0.05)
+          .map(([type, n]) => `<div class="paire"><span>${UNITES[type].nom}</span><span>${Math.round(n)}</span></div>`)
+          .join('')}
+      </div>
 
       <div class="bloc">
         <h3>Motivation</h3>
@@ -661,9 +674,12 @@ export class Interface {
         aMoi
           ? `<div class="ordres">
                <button class="bouton-ordre" data-action="halte" ${armee.route ? '' : 'disabled'}>Faire halte</button>
+               <button class="bouton-ordre" data-action="diviser"
+                       ${armee.route || armee.enBataille || armee.effectif < 2 ? 'disabled' : ''}>Diviser</button>
+               <button class="bouton-ordre" data-action="fusionner"
+                       ${fusionsPossibles(this.etat, armee).length ? '' : 'disabled'}>Fusionner ici</button>
              </div>
-             <p class="indication">Clic droit sur une province pour l'y envoyer.
-             Maj + clic droit pour n'y envoyer que la moitié du corps.</p>`
+             <p class="indication">Clic droit sur une province pour l'y envoyer.</p>`
           : '<p class="indication">Corps étranger : vous ne pouvez que l\'observer.</p>'
       }`;
 
@@ -742,6 +758,19 @@ export class Interface {
 
   basculerDiplomatie() {
     this.basculerLateral('diplomatie');
+  }
+
+  /** Après une reprise de partie, tout est à redessiner. */
+  reinitialiser() {
+    this.signatureTerritoire = null;
+    this.signatureEconomie = null;
+    this.signatureArmee = null;
+    this.signatureDiplomatie = null;
+    this.signaturePuissances = null;
+    this.dernierJournal = -1;
+    this.derniereSelection = undefined;
+    this.reponseDiplomatique = null;
+    this.initialiserBandeau();
   }
 
   /** Force la reconstruction du panneau après une action du joueur. */

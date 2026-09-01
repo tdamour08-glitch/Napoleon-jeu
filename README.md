@@ -26,7 +26,8 @@ python3 -m http.server 8000
 | Désélectionner | `Échap` |
 | Sélectionner un corps d'armée | clic sur son pion |
 | Ordre de marche | **clic droit** sur une province |
-| Détacher la moitié d'un corps | **Maj + clic droit** |
+| Diviser / fusionner un corps | boutons du panneau du corps |
+| Enregistrer, reprendre, exporter | menu **Partie** |
 | Trésor et marché | `E` ou le bouton **Économie** |
 | Cabinet diplomatique | `D` ou le bouton **Diplomatie** |
 | Guide « comment jouer » | `H` ou le bouton **Guide** |
@@ -59,6 +60,7 @@ index.html            page et ossature de l'interface
 css/style.css         thème Empire
 js/data/monde.js      provinces : nom, capitale, terrain, gisements, souverain
 js/data/frontieres.js contours réels (généré par outils/frontieres.py)
+js/data/unites.js     les armes : forces, vitesses, prix, affinités
 js/data/empires.js    puissances, couleurs, doctrines
 js/map/geo.js         projection de Mercator et géométrie des polygones
 js/map/carte.js       frontières calculées (Voronoï découpé par la côte)
@@ -71,6 +73,7 @@ js/core/ia_militaire.js conduite des armées non jouées
 js/core/ia_strategie.js décisions des cabinets : alliances, guerres, paix
 js/core/traites.js    traités, annexion, reddition, élimination, victoire
 js/core/politiques.js choix sociaux, impôt, dette, croissance de la population
+js/core/sauvegarde.js enregistrement, reprise, export et import de partie
 outils/frontieres.py  fabrique js/data/frontieres.js depuis Natural Earth
 js/ui/traite.js       table des négociations
 js/core/tour.js       ordre des systèmes dans une journée
@@ -135,6 +138,29 @@ produit jusqu'à 40&nbsp;% de moins. C'est le moral *civil*&nbsp;; la motivation
 Les puissances non jouées gèrent déjà leur économie sommairement (elles vendent leurs
 surplus, achètent ce qui leur manque et développent leurs meilleures provinces). Leur
 véritable intelligence — expansion, guerres, alliances — arrive en phase 4.
+
+### Les armes et la marine
+
+Un corps n'est pas un bloc d'hommes mais un **mélange d'armes**, et c'est de là que
+vient la stratégie&nbsp;:
+
+| Arme | Force | Vitesse | Bat | Se brise sur |
+|---|---|---|---|---|
+| Infanterie | 1,0 | 1,0 | la cavalerie (×1,35) | l'artillerie (×0,85) |
+| Cavalerie | 1,1 | 1,5 | l'artillerie (×1,7) | l'infanterie (×0,8) |
+| Artillerie | 1,6 | 0,65 | l'infanterie (×1,45) | la cavalerie (×0,55) |
+
+Le triangle se referme&nbsp;: une armée d'une seule arme se fait battre par la moitié de
+son nombre bien choisie. Les pertes elles-mêmes suivent l'appariement — l'artillerie
+fond quand la cavalerie l'aborde. La vitesse d'un corps est celle de son élément le plus
+lent&nbsp;: traîner de l'artillerie, c'est renoncer à surprendre.
+
+À la mer, **vaisseaux de ligne** et **frégates** obéissent au même principe. Une escadre
+ne circule que sur les routes maritimes et ne prend aucune province, mais elle décide de
+tout&nbsp;: une armée de terre ne franchit un bras de mer que si sa marine tient le
+passage — une escadre à l'un des deux bords, et aucune escadre ennemie plus forte. En
+1805 la Royal Navy aligne cinquante navires contre trente-trois à la France : l'Angleterre
+est hors d'atteinte tant que cela dure.
 
 ### Comment se fait la guerre
 
@@ -241,6 +267,33 @@ croît quand le moral est bon, recule sous la disette et l'occupation, et bute s
 plafond valant 2 plus le développement — que les choix sociaux relèvent ou abaissent.
 Mesuré sur vingt ans dans une province de développement 2 au moral 65&nbsp;: 2,0 → 4,0
 sans politique, 5,0 avec hospices et abolition, 3,7 sous conscription.
+
+### Les avantages de départ
+
+Chaque grande puissance commence avec les réformes qu'elle avait réellement accomplies.
+La France en a trois — c'est la mieux dotée, et c'est aussi contre elle que l'Europe se
+liguera.
+
+| Puissance | Réformes acquises | Justification |
+|---|---|---|
+| France | Abolition des privilèges, Hospices, Écoles | la Révolution a fait les trois |
+| Royaume-Uni | Écoles, **crédit ×1,8** | Royal Society, manufactures, Banque d'Angleterre |
+| Prusse | Conscription, Écoles | système cantonal et école obligatoire |
+| Autriche | Grands travaux | routes et bureaucratie de Joseph II |
+| Russie | Conscription | le recrutement par levées |
+| Espagne | Grands travaux | réformes bourboniennes, plus l'or des Amériques |
+| Empire ottoman | Hospices | les fondations pieuses |
+
+Ces réformes coûtent chaque jour&nbsp;: la France démarre en déficit d'environ cinq
+pièces d'or par jour et doit relever son impôt ou vendre ses surplus. C'est le prix de
+son avance.
+
+### Enregistrer une partie
+
+Le menu **Partie** enregistre l'état du jeu dans le navigateur (43 Ko environ) et le
+reprend plus tard. Il permet aussi de télécharger la partie en fichier JSON et de la
+rouvrir. Seul ce qui change est sérialisé&nbsp;: la géométrie de la carte, qui pèse
+deux cents kilo-octets, se reconstruit à l'identique au chargement.
 
 ### Régler la partie
 

@@ -451,7 +451,7 @@ function chercherGuerre(etat, empire, equilibre) {
 function puissanceDisponible(etat, idEmpire) {
   let total = 0;
   for (const armee of Object.values(etat.armees)) {
-    if (armee.empire !== idEmpire) continue;
+    if (armee.empire !== idEmpire || armee.domaine !== 'terre') continue;
     const lieu = etat.carte.territoires[armee.lieu];
     total += puissanceAuCombat(etat, armee, lieu, false);
   }

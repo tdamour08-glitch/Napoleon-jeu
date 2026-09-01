@@ -7,7 +7,9 @@
 
 export const EMPIRES = [
   {
-    id: 'fra', article: "l'",
+    id: 'fra',
+    // La Révolution a aboli les privilèges, ouvert les écoles centrales et les hospices : trois réformes déjà acquises.
+    politiquesInitiales: ['abolition', 'sante', 'instruction'], article: "l'",
     nom: 'Empire français',
     adjectif: 'français',
     souverain: 'Napoléon Ier',
@@ -23,17 +25,21 @@ export const EMPIRES = [
     },
   },
   {
-    id: 'gbr', article: "le",
+    id: 'gbr',
+    // La Royal Society et les manufactures ; surtout, la Banque d'Angleterre, qui lui ouvre un crédit sans rival.
+    politiquesInitiales: ['instruction'], article: "le",
     nom: 'Royaume-Uni',
     adjectif: 'britannique',
     souverain: 'George III',
     couleur: '#c0392b',
     jouable: true,
     resume: 'Maîtresse des mers et banquière des coalitions, faible sur terre.',
-    doctrine: { elan: 0.95, moralInitial: 60, gainMoralVictoire: 1.0, orBonus: 1.3 },
+    doctrine: { elan: 0.95, moralInitial: 60, gainMoralVictoire: 1.0, orBonus: 1.3, credit: 1.8 },
   },
   {
-    id: 'pru', article: "le",
+    id: 'pru',
+    // Le système cantonal et l'école obligatoire depuis Frédéric II.
+    politiquesInitiales: ['conscription', 'instruction'], article: "le",
     nom: 'Royaume de Prusse',
     adjectif: 'prussien',
     souverain: 'Frédéric-Guillaume III',
@@ -43,7 +49,9 @@ export const EMPIRES = [
     doctrine: { elan: 1.05, moralInitial: 65, gainMoralVictoire: 1.1, disciplineDefensive: 1.15 },
   },
   {
-    id: 'aut', article: "l'",
+    id: 'aut',
+    // Les routes, les canaux et la bureaucratie léguées par Joseph II.
+    politiquesInitiales: ['travaux'], article: "l'",
     nom: 'Empire d\'Autriche',
     adjectif: 'autrichien',
     souverain: 'François Ier',
@@ -53,7 +61,9 @@ export const EMPIRES = [
     doctrine: { elan: 0.95, moralInitial: 60, gainMoralVictoire: 1.0, reserves: 1.2 },
   },
   {
-    id: 'rus', article: "l'",
+    id: 'rus',
+    // Le recrutement par levées : une réserve d'hommes que nul ne peut égaler.
+    politiquesInitiales: ['conscription'], article: "l'",
     nom: 'Empire russe',
     adjectif: 'russe',
     souverain: 'Alexandre Ier',
@@ -63,7 +73,9 @@ export const EMPIRES = [
     doctrine: { elan: 0.9, moralInitial: 75, gainMoralVictoire: 0.9, tenacite: 1.25 },
   },
   {
-    id: 'esp', article: "le",
+    id: 'esp',
+    // Les réformes bourboniennes : routes royales, canaux et arsenaux.
+    politiquesInitiales: ['travaux'], article: "le",
     nom: 'Royaume d\'Espagne',
     adjectif: 'espagnol',
     souverain: 'Charles IV',
@@ -73,7 +85,9 @@ export const EMPIRES = [
     doctrine: { elan: 0.85, moralInitial: 55, gainMoralVictoire: 1.0, orBonus: 1.25 },
   },
   {
-    id: 'ott', article: "l'",
+    id: 'ott',
+    // Les fondations pieuses entretiennent hospices et fontaines dans tout l'empire.
+    politiquesInitiales: ['sante'], article: "l'",
     nom: 'Empire ottoman',
     adjectif: 'ottoman',
     souverain: 'Sélim III',

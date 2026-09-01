@@ -4,6 +4,7 @@
 
 import { TERRAINS } from '../data/empires.js';
 import { controleur } from '../core/etat.js';
+import { armeDominante } from '../data/unites.js';
 
 const COULEUR_MER = '#16283f';
 const COULEUR_MER_PROFONDE = '#101d2f';
@@ -147,19 +148,21 @@ export class Rendu {
     const cam = this.camera;
     if (cam.zoom < 0.5) return;
     const compact = cam.zoom < 1.1;
-    const largeur = compact ? 20 : 30;
+    const largeur = compact ? 22 : 36;
     const hauteur = compact ? 12 : 17;
 
     for (const { armee, x, y } of this.calculerPionsArmees(etat)) {
       if (x < -40 || y < -40 || x > cam.largeur + 40 || y > cam.hauteur + 40) continue;
       const empire = etat.empires[armee.empire];
       const selectionnee = etat.selectionArmee === armee.id;
+      const encre = contraste(empire.couleur);
 
       ctx.save();
       ctx.translate(x, y);
 
-      // Corps du pion.
-      rectangleArrondi(ctx, -largeur / 2, -hauteur / 2, largeur, hauteur, 3);
+      // Corps du pion : rectangle à terre, pastille allongée en mer.
+      const rayon = armee.domaine === 'mer' ? hauteur / 2 : 3;
+      rectangleArrondi(ctx, -largeur / 2, -hauteur / 2, largeur, hauteur, rayon);
       ctx.fillStyle = empire.couleur;
       ctx.fill();
       ctx.lineWidth = selectionnee ? 2.2 : 1.1;
@@ -174,11 +177,13 @@ export class Rendu {
       ctx.fillRect(-largeurJauge / 2, hauteur / 2 + 1, (largeurJauge * armee.motivation) / 100, 3);
 
       if (!compact) {
+        // Icône de l'arme dominante, puis l'effectif.
+        dessinerArme(ctx, armeDominante(armee.unites), -largeur / 2 + 9, 0, encre);
         ctx.font = '600 11px "Iowan Old Style", Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = contraste(empire.couleur);
-        ctx.fillText(Math.round(armee.effectif), 0, 0.5);
+        ctx.fillStyle = encre;
+        ctx.fillText(Math.round(armee.effectif), 5, 0.5);
       }
 
       // Une armée en marche porte un fanion ; au combat, une pointe rouge.
@@ -248,7 +253,7 @@ export class Rendu {
       // Zone de préhension un peu plus large que le pion : les corps se
       // chevauchent et un clic au pixel près serait pénible.
       const compact = this.camera.zoom < 1.1;
-      const dx = compact ? 13 : 18;
+      const dx = compact ? 14 : 21;
       const dy = compact ? 10 : 14;
       if (Math.abs(px - x) <= dx && Math.abs(py - y) <= dy) return armee.id;
     }
@@ -369,6 +374,53 @@ function rectangleArrondi(ctx, x, y, largeur, hauteur, rayon) {
   ctx.arcTo(x, y + hauteur, x, y, rayon);
   ctx.arcTo(x, y, x + largeur, y, rayon);
   ctx.closePath();
+}
+
+/**
+ * Icône d'une arme, dessinée au trait : un bloc pour l'infanterie, un sabre
+ * pour la cavalerie, un boulet pour l'artillerie, une voile pour les navires.
+ */
+function dessinerArme(ctx, type, x, y, couleur) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = couleur;
+  ctx.strokeStyle = couleur;
+  ctx.lineWidth = 1.5;
+  switch (type) {
+    case 'infanterie':
+      ctx.fillRect(-4, -3, 8, 6);
+      break;
+    case 'cavalerie':
+      ctx.beginPath();
+      ctx.moveTo(-4.5, 3.5);
+      ctx.lineTo(4.5, -3.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(4.5, -3.5);
+      ctx.lineTo(1.5, -3);
+      ctx.lineTo(4, -0.5);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case 'artillerie':
+      ctx.beginPath();
+      ctx.arc(0, 0, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    case 'ligne':
+    case 'fregate':
+      ctx.beginPath();
+      ctx.moveTo(0, -4.5);
+      ctx.lineTo(4, 3);
+      ctx.lineTo(-4, 3);
+      ctx.closePath();
+      if (type === 'ligne') ctx.fill();
+      else ctx.stroke();
+      break;
+    default:
+      break;
+  }
+  ctx.restore();
 }
 
 export function couleurMotivation(motivation) {

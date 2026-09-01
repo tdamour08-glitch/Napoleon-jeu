@@ -14,9 +14,10 @@ import {
   dissoudre,
   ordonnerMarche,
   recompenserVictoire,
-  punirDefaite,
+  majEffectif,
   SEUIL_DEROUTE,
 } from './armees.js';
+import { puissanceComposition, appliquerPertes, compositionVide, totalUnites } from '../data/unites.js';
 import { avecArticle, genitif, prepositionDe } from '../data/langue.js';
 
 /** Part de l'effectif perdue par jour à puissances égales. */
@@ -42,16 +43,34 @@ const DEFENSE_TERRAIN = {
 };
 
 /**
- * Puissance d'une armée sur un champ de bataille donné.
- * L'élan de doctrine agit ici sans jamais être affiché : c'est
- * au joueur de deviner, aux résultats, ce que valent ses troupes.
+ * Puissance d'un corps sur un champ de bataille donné, face à une
+ * composition adverse : c'est là que joue le triangle des armes.
+ * L'élan de doctrine agit ici sans jamais être affiché : c'est au joueur
+ * de deviner, aux résultats, ce que valent ses troupes.
  */
-export function puissance(etat, armee, territoire, defenseur) {
+export function puissance(etat, armee, territoire, defenseur, unitesAdverses = null) {
   const doctrine = etat.empires[armee.empire].doctrine;
   const motivation = 0.55 + (armee.motivation / 100) * 0.9;
-  const terrain = defenseur ? (DEFENSE_TERRAIN[territoire.terrain] ?? 1) : 1;
+  const terrain = defenseur && armee.domaine === 'terre' ? DEFENSE_TERRAIN[territoire.terrain] ?? 1 : 1;
   const discipline = defenseur ? doctrine.disciplineDefensive ?? 1 : 1;
-  return armee.effectif * (doctrine.elan ?? 1) * motivation * terrain * discipline;
+  const face = unitesAdverses ?? compositionEquilibree(armee.domaine);
+  return puissanceComposition(armee.unites, face) * (doctrine.elan ?? 1) * motivation * terrain * discipline;
+}
+
+/** Adversaire théorique, quand on évalue une force hors de tout combat. */
+function compositionEquilibree(domaine) {
+  const vide = compositionVide(domaine);
+  for (const type of Object.keys(vide)) vide[type] = 1;
+  return vide;
+}
+
+/** Somme des compositions d'un groupe de corps. */
+function compositionCumulee(armees, domaine) {
+  const total = compositionVide(domaine);
+  for (const armee of armees) {
+    for (const [type, nombre] of Object.entries(armee.unites)) total[type] = (total[type] ?? 0) + nombre;
+  }
+  return total;
 }
 
 /* ------------------------------------------------------------
@@ -114,14 +133,22 @@ function resoudreProvince(etat, territoire) {
     return;
   }
 
-  const camps = repartirEnCamps(etat, territoire, presentes);
-  if (!camps) {
-    avancerOccupation(etat, territoire, presentes);
-    return;
+  // Terre et mer se battent séparément : une escadre ne prend pas une province.
+  let bataille = false;
+  for (const domaine of ['terre', 'mer']) {
+    const engagees = presentes.filter((a) => a.domaine === domaine);
+    if (engagees.length < 2) continue;
+    const camps = repartirEnCamps(etat, territoire, engagees, domaine);
+    if (!camps) continue;
+    bataille = true;
+    livrerBataille(etat, territoire, camps, domaine);
   }
 
-  territoire.occupationEnCours = null;
-  livrerBataille(etat, territoire, camps);
+  if (bataille) {
+    territoire.occupationEnCours = null;
+    return;
+  }
+  avancerOccupation(etat, territoire, presentes.filter((a) => a.domaine === 'terre'));
 }
 
 /**
@@ -131,7 +158,7 @@ function resoudreProvince(etat, territoire) {
  * les puissances en guerre avec elle.
  * @returns {{defenseur: string, attaquants: string[], armeesD: object[], armeesA: object[]}|null}
  */
-function repartirEnCamps(etat, territoire, presentes) {
+function repartirEnCamps(etat, territoire, presentes, domaine = 'terre') {
   const parEmpire = new Map();
   for (const armee of presentes) {
     if (!parEmpire.has(armee.empire)) parEmpire.set(armee.empire, []);
@@ -139,8 +166,9 @@ function repartirEnCamps(etat, territoire, presentes) {
   }
   if (parEmpire.size < 2) return null;
 
-  const maitreDuSol = controleur(territoire);
-  let defenseur = parEmpire.has(maitreDuSol) ? maitreDuSol : null;
+  // À la mer, nul ne « défend son sol » : le plus nombreux tient la position.
+  const maitreDuSol = domaine === 'terre' ? controleur(territoire) : null;
+  let defenseur = maitreDuSol && parEmpire.has(maitreDuSol) ? maitreDuSol : null;
   if (!defenseur) {
     let meilleur = -1;
     for (const [empire, armees] of parEmpire) {
@@ -165,12 +193,17 @@ function repartirEnCamps(etat, territoire, presentes) {
   };
 }
 
-function livrerBataille(etat, territoire, camps) {
+function livrerBataille(etat, territoire, camps, domaine = 'terre') {
   const { armeesD, armeesA } = camps;
   for (const armee of [...armeesD, ...armeesA]) armee.enBataille = true;
 
-  const puissanceD = armeesD.reduce((s, a) => s + puissance(etat, a, territoire, true), 0);
-  const puissanceA = armeesA.reduce((s, a) => s + puissance(etat, a, territoire, false), 0);
+  // Chaque camp évalue sa force au vu de ce que l'autre aligne.
+  const compositionD = compositionCumulee(armeesD, domaine);
+  const compositionA = compositionCumulee(armeesA, domaine);
+  if (totalUnites(compositionD) <= 0 || totalUnites(compositionA) <= 0) return;
+
+  const puissanceD = armeesD.reduce((s, a) => s + puissance(etat, a, territoire, true, compositionA), 0);
+  const puissanceA = armeesA.reduce((s, a) => s + puissance(etat, a, territoire, false, compositionD), 0);
   if (puissanceD <= 0 || puissanceA <= 0) return;
 
   const partD = Math.min(PERTES_MAX, (TAUX_PERTES * puissanceA) / puissanceD);
@@ -179,8 +212,15 @@ function livrerBataille(etat, territoire, camps) {
   const effectifD = armeesD.reduce((s, a) => s + a.effectif, 0);
   const effectifA = armeesA.reduce((s, a) => s + a.effectif, 0);
 
-  for (const armee of armeesD) armee.effectif *= 1 - partD;
-  for (const armee of armeesA) armee.effectif *= 1 - partA;
+  // Les pertes frappent d'abord les armes mal appariées à celles d'en face.
+  for (const armee of armeesD) {
+    appliquerPertes(armee.unites, partD, compositionA);
+    majEffectif(armee);
+  }
+  for (const armee of armeesA) {
+    appliquerPertes(armee.unites, partA, compositionD);
+    majEffectif(armee);
+  }
 
   // Le camp qui souffre le moins voit sa motivation monter, l'autre s'effrite.
   const total = partD + partA;
@@ -189,6 +229,7 @@ function livrerBataille(etat, territoire, camps) {
   ajusterMotivation(etat, armeesA, (0.5 - avantageD) * 8);
 
   etat.batailles[territoire.id] = {
+    domaine,
     defenseur: camps.defenseur,
     attaquants: camps.attaquants,
     effectifD,
@@ -220,6 +261,7 @@ function ajusterMotivation(etat, armees, delta) {
 function faireRompre(etat, territoire, armees) {
   let rompus = 0;
   for (const armee of armees) {
+    majEffectif(armee);
     if (armee.effectif < 0.6) {
       dissoudre(etat, armee);
       continue;
@@ -228,7 +270,8 @@ function faireRompre(etat, territoire, armees) {
 
     const refuge = trouverRefuge(etat, territoire, armee);
     if (refuge && ordonnerMarche(etat, armee, refuge)) {
-      armee.effectif *= 0.9;
+      for (const type of Object.keys(armee.unites)) armee.unites[type] *= 0.9;
+      majEffectif(armee);
       armee.motivation = Math.max(0, armee.motivation - 8);
       armee.enBataille = false;
       rompus += 1;
@@ -243,7 +286,10 @@ function faireRompre(etat, territoire, armees) {
 
 /** Province voisine où se replier : la sienne de préférence, sinon la moins hostile. */
 function trouverRefuge(etat, territoire, armee) {
-  const candidats = territoire.voisins
+  // Une escadre ne se replie que par la mer.
+  const sorties =
+    armee.domaine === 'mer' ? territoire.voisinsMaritimes : territoire.voisins;
+  const candidats = sorties
     .map((id) => etat.carte.territoires[id])
     .filter((t) => {
       const occupants = armeesDans(etat, t.id);

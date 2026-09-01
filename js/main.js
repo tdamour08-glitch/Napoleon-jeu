@@ -5,7 +5,15 @@
 import { creerPartie, journaliser } from './core/etat.js';
 import { recalculerEconomie, initialiserReserves, lancerChantier, echanger } from './core/economie.js';
 import { jouerUnJour } from './core/tour.js';
-import { lancerLevee, ordonnerMarche, annulerMarche, detacher } from './core/armees.js';
+import {
+  lancerLevee,
+  ordonnerMarche,
+  annulerMarche,
+  diviser,
+  fusionner,
+  fusionsPossibles,
+} from './core/armees.js';
+import { enregistrer, charger, sauvegardeExiste, exporterFichier, importerFichier } from './core/sauvegarde.js';
 import {
   declarerGuerre,
   rompreAlliance,
@@ -58,10 +66,24 @@ async function demarrer() {
       const resultat = echanger(etat, etat.empires[etat.joueur], ressource, sens);
       if (!resultat.ok) journaliser(etat, resultat.motif);
     },
-    lever: (id) => {
-      const verdict = lancerLevee(etat, etat.carte.territoires[id]);
+    lever: (id, type) => {
+      const verdict = lancerLevee(etat, etat.carte.territoires[id], type);
       if (!verdict.possible) journaliser(etat, verdict.motif);
       recalculerEconomie(etat);
+    },
+    diviser: (idArmee) => {
+      const armee = etat.armees[idArmee];
+      if (!armee) return;
+      const detachement = diviser(etat, armee);
+      if (!detachement) journaliser(etat, 'Ce corps est trop réduit pour se diviser.');
+      else etat.selectionArmee = detachement.id;
+    },
+    fusionner: (idArmee) => {
+      const armee = etat.armees[idArmee];
+      if (!armee) return;
+      const candidats = fusionsPossibles(etat, armee);
+      if (candidats.length === 0) return;
+      fusionner(etat, armee, candidats[0]);
     },
     declarerGuerre: (idCible) => {
       declarerGuerre(etat, etat.joueur, idCible);
@@ -167,6 +189,7 @@ async function demarrer() {
   );
 
   brancherControles(canvas, camera, rendu, etat, moteur, guide, table, ui, centrerSurTerritoire);
+  brancherSauvegarde(etat, ui);
   window.addEventListener('resize', () => rendu.redimensionner());
 
   moteur.demarrer();
@@ -177,6 +200,55 @@ async function demarrer() {
 }
 
 
+
+/**
+ * Enregistrement et reprise. Recharger la page après avoir chargé une partie
+ * serait plus simple, mais on perdrait l'écran ; on remplace donc l'état en
+ * place et on laisse la boucle repartir dessus.
+ */
+function brancherSauvegarde(etat, ui) {
+  const boutonCharger = document.getElementById('btn-charger');
+  const menu = document.getElementById('menu-partie');
+  boutonCharger.disabled = !sauvegardeExiste();
+
+  document.getElementById('btn-partie').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    menu.classList.toggle('cache');
+  });
+  document.addEventListener('click', () => menu.classList.add('cache'));
+  menu.addEventListener('click', () => menu.classList.add('cache'));
+
+  document.getElementById('btn-sauver').addEventListener('click', () => {
+    const resultat = enregistrer(etat);
+    journaliser(etat, resultat.ok ? 'Partie enregistrée.' : resultat.motif);
+    boutonCharger.disabled = !sauvegardeExiste();
+  });
+
+  const reprendre = (nouvelEtat) => {
+    // On recopie dans l'objet existant : toutes les vues le référencent déjà.
+    for (const cle of Object.keys(etat)) delete etat[cle];
+    Object.assign(etat, nouvelEtat);
+    ui.reinitialiser();
+    journaliser(etat, 'Partie reprise.');
+  };
+
+  boutonCharger.addEventListener('click', () => {
+    try {
+      reprendre(charger());
+    } catch (erreur) {
+      journaliser(etat, erreur.message);
+    }
+  });
+
+  document.getElementById('btn-exporter').addEventListener('click', () => exporterFichier(etat));
+  document.getElementById('btn-importer').addEventListener('click', async () => {
+    try {
+      reprendre(await importerFichier());
+    } catch (erreur) {
+      journaliser(etat, erreur.message);
+    }
+  });
+}
 
 /** Écran de fin : verdict, motif et bilan des grandes puissances. */
 function afficherFinDePartie(etat) {
@@ -277,11 +349,6 @@ function brancherControles(canvas, camera, rendu, etat, moteur, guide, table, ui
     const destination = rendu.territoireSous(etat, ev.clientX - rect.left, ev.clientY - rect.top);
     if (!destination) return;
 
-    if (ev.shiftKey) {
-      const detachement = detacher(etat, armee, destination);
-      if (!detachement) journaliser(etat, 'Ce corps est trop réduit pour se diviser.');
-      return;
-    }
     if (!ordonnerMarche(etat, armee, destination)) {
       journaliser(etat, `Aucune route ne mène à ${etat.carte.territoires[destination].nom}.`);
     }

@@ -14,7 +14,7 @@ import {
   ordonnerMarche,
   verifierLevee,
   lancerLevee,
-  TAILLE_CORPS,
+  estPort,
 } from './armees.js';
 import { puissance } from './combat.js';
 
@@ -43,17 +43,59 @@ export function conduireArmeesBots(etat) {
   }
 }
 
-/** Une puissance en guerre lève des troupes tant qu'elle en a les moyens. */
+/**
+ * Une puissance en guerre lève des troupes tant qu'elle en a les moyens,
+ * en cherchant à garder une armée équilibrée : environ deux tiers
+ * d'infanterie, un cinquième de cavalerie, le reste en artillerie.
+ */
+const MELANGE_VISE = { infanterie: 0.66, cavalerie: 0.2, artillerie: 0.14 };
+
 function leverSiNecessaire(etat, empire, enGuerre) {
-  const hommes = effectifTotal(etat, empire.id);
+  const provinces = empire.territoires.map((id) => etat.carte.territoires[id]);
+
+  // Une puissance maritime entretient une escadre.
+  const navires = forcesDe(etat, empire.id, 'mer');
+  const ports = provinces.filter((t) => estPort(t) && !t.levee);
+  const tousPorts = provinces.filter(estPort).length;
+  if (ports.length && navires < 4 + 3 * tousPorts) {
+    const type = navires % 3 === 0 ? 'ligne' : 'fregate';
+    const port = ports.sort((a, b) => b.population - a.population)[0];
+    if (verifierLevee(etat, port, type).possible) {
+      lancerLevee(etat, port, type);
+      return;
+    }
+  }
+
+  const hommes = forcesDe(etat, empire.id, 'terre');
   const plafond = enGuerre ? empire.reservesMax * 1.2 : empire.reservesMax * 0.6;
   if (hommes >= plafond) return;
 
-  const provinces = empire.territoires
-    .map((id) => etat.carte.territoires[id])
-    .filter((t) => !t.levee && verifierLevee(etat, t).possible)
+  // On lève l'arme dont on manque le plus au regard du mélange visé.
+  const actuel = compositionEmpire(etat, empire.id);
+  const total = Object.values(actuel).reduce((s, v) => s + v, 0) || 1;
+  const manquante = Object.entries(MELANGE_VISE)
+    .map(([type, part]) => ({ type, ecart: part - (actuel[type] ?? 0) / total }))
+    .sort((a, b) => b.ecart - a.ecart)[0].type;
+
+  const candidates = provinces
+    .filter((t) => !t.levee && verifierLevee(etat, t, manquante).possible)
     .sort((a, b) => b.population - a.population);
-  if (provinces.length) lancerLevee(etat, provinces[0]);
+  if (candidates.length) lancerLevee(etat, candidates[0], manquante);
+}
+
+function forcesDe(etat, idEmpire, domaine) {
+  return Object.values(etat.armees)
+    .filter((a) => a.empire === idEmpire && a.domaine === domaine)
+    .reduce((s, a) => s + a.effectif, 0);
+}
+
+function compositionEmpire(etat, idEmpire) {
+  const total = { infanterie: 0, cavalerie: 0, artillerie: 0 };
+  for (const armee of Object.values(etat.armees)) {
+    if (armee.empire !== idEmpire || armee.domaine !== 'terre') continue;
+    for (const type of Object.keys(total)) total[type] += armee.unites[type] ?? 0;
+  }
+  return total;
 }
 
 function conduireCampagne(etat, empire, adversaires) {
@@ -62,6 +104,7 @@ function conduireCampagne(etat, empire, adversaires) {
   const parProvince = new Map();
   for (const armee of Object.values(etat.armees)) {
     if (armee.empire !== empire.id || armee.route || armee.enBataille) continue;
+    if (armee.domaine !== 'terre') continue; // les escadres tiennent leurs ports
     if (!parProvince.has(armee.lieu)) parProvince.set(armee.lieu, []);
     parProvince.get(armee.lieu).push(armee);
   }
@@ -114,6 +157,7 @@ function rentrerAuPays(etat, empire) {
   if (!capitale) return;
   for (const armee of Object.values(etat.armees)) {
     if (armee.empire !== empire.id || armee.route || armee.enBataille) continue;
+    if (armee.domaine !== 'terre') continue;
     if (controleur(etat.carte.territoires[armee.lieu]) === empire.id) continue;
     ordonnerMarche(etat, armee, capitale.id);
   }
@@ -159,16 +203,9 @@ function ennemiLePlusProche(etat, armee, adversaires) {
 }
 
 function defenseDe(etat, territoire) {
-  return armeesDans(etat, territoire.id).reduce(
-    (s, a) => s + puissance(etat, a, territoire, true),
-    0,
-  );
+  return armeesDans(etat, territoire.id)
+    .filter((a) => a.domaine === 'terre')
+    .reduce((s, a) => s + puissance(etat, a, territoire, true), 0);
 }
 
-function effectifTotal(etat, idEmpire) {
-  return Object.values(etat.armees)
-    .filter((a) => a.empire === idEmpire)
-    .reduce((s, a) => s + a.effectif, 0);
-}
 
-export { TAILLE_CORPS };

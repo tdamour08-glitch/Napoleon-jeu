@@ -100,6 +100,16 @@
       <button id="btn-economie" class="bouton-outil" title="Trésor et marché (E)">Économie</button>
       <button id="btn-diplomatie" class="bouton-outil" title="Cabinet diplomatique (D)">Diplomatie</button>
       <button id="btn-guide" class="bouton-outil" title="Comment jouer (H)">Guide</button>
+      <div class="menu-outil">
+        <button id="btn-partie" class="bouton-outil" title="Enregistrer ou reprendre une partie">Partie ▾</button>
+        <div id="menu-partie" class="menu-deroulant cache">
+          <button id="btn-sauver">Enregistrer</button>
+          <button id="btn-charger">Reprendre la partie enregistrée</button>
+          <hr>
+          <button id="btn-exporter">Télécharger un fichier de partie</button>
+          <button id="btn-importer">Ouvrir un fichier de partie</button>
+        </div>
+      </div>
     </div>
 
     <div class="bandeau-temps">
@@ -138,7 +148,7 @@
   <div id="voile-pause" class="voile-pause">PAUSE</div>
 
   <div id="aide-controles" class="aide-controles">
-    Glisser ou flèches : déplacer &middot; Molette : zoom &middot; Espace : pause &middot; 1/2/3 : vitesse &middot; C : recentrer &middot; H : guide &middot; D : diplomatie<br>Clic : sélectionner &middot; Clic droit : ordre de marche &middot; Maj + clic droit : détacher la moitié
+    Glisser ou flèches : déplacer &middot; Molette : zoom &middot; Espace : pause &middot; 1/2/3 : vitesse &middot; C : recentrer &middot; H : guide &middot; D : diplomatie<br>Clic : sélectionner un corps &middot; Clic droit : ordre de marche
   </div>
 </div>
 
@@ -294,38 +304,64 @@
       </section>
 
       <section>
-        <h3>9. Lever et conduire une armée</h3>
+        <h3>9. Les armes</h3>
         <p>
-          Dans une de vos provinces, ordonnez une <strong>levée</strong>&nbsp;: elle puise
-          dans vos <strong>réserves d'hommes</strong>, coûte or, fer et bois, et met vingt
-          jours à rassembler un corps de 10&nbsp;000 hommes.
+          Un corps n'est pas un bloc d'hommes : c'est un mélange d'armes, et tout
+          l'art consiste à amener la bonne devant la mauvaise.
         </p>
         <ul>
-          <li><strong>Clic</strong> sur un pion pour sélectionner le corps.</li>
-          <li><strong>Clic droit</strong> sur une province pour l'y envoyer&nbsp;; il suit
-              la route la plus rapide, mer comprise.</li>
-          <li><strong>Maj + clic droit</strong> détache la moitié du corps et l'envoie seule.</li>
+          <li><strong>Infanterie</strong> — l'ossature. En carré, elle brise les charges de cavalerie.</li>
+          <li><strong>Cavalerie</strong> — rapide, elle tourne les batteries et taille l'artillerie en pièces,
+              mais se brise sur l'infanterie en ordre.</li>
+          <li><strong>Artillerie</strong> — dévastatrice sur l'infanterie massée, sans défense si on l'aborde.</li>
         </ul>
         <p class="note">
-          Les armées coûtent chaque jour de l'or, du bois, du fer et de l'eau. Une armée
-          impayée déserte.
+          Infanterie &gt; cavalerie &gt; artillerie &gt; infanterie. Une armée d'une seule
+          arme se fait battre par la moitié de son nombre bien choisie.
+        </p>
+        <p>
+          À la mer, même principe : les <strong>vaisseaux de ligne</strong> écrasent les
+          <strong>frégates</strong>, qui vont deux fois plus vite. Une escadre ne quitte
+          jamais les routes maritimes et ne prend aucune province.
         </p>
       </section>
 
       <section>
-        <h3>10. Batailles et motivation</h3>
+        <h3>10. Lever et conduire ses corps</h3>
+        <p>
+          Dans une de vos provinces, chaque arme a son bouton : elle puise dans vos
+          <strong>réserves d'hommes</strong>, coûte or, fer et bois, et met de vingt à
+          trente-quatre jours à se former. Les <strong>ports</strong> — les provinces
+          ouvertes sur une route maritime — arment en plus vaisseaux et frégates.
+        </p>
+        <ul>
+          <li><strong>Clic</strong> sur un pion pour sélectionner le corps. L'icône dit
+              l'arme dominante, le nombre dit l'effectif, la barre dessous la motivation.</li>
+          <li><strong>Clic droit</strong> sur une province pour l'y envoyer.</li>
+          <li><strong>Diviser</strong> coupe le corps en deux ; <strong>Fusionner ici</strong>
+              le réunit à un corps ami présent sur place.</li>
+        </ul>
+        <p class="note">
+          Une armée de terre ne franchit un bras de mer que si votre marine tient le
+          passage : une escadre à l'un des deux bords, et aucune escadre ennemie plus
+          forte. C'est ce qui met l'Angleterre à l'abri d'un débarquement improvisé.
+        </p>
+      </section>
+
+      <section>
+        <h3>11. Batailles et motivation</h3>
         <p>
           Deux puissances en guerre dont les troupes se trouvent dans la même province se
-          livrent bataille jour après jour. Les pertes suivent le rapport des forces&nbsp;;
-          le défenseur profite du terrain — montagnes, forêts et collines coûtent cher à
-          l'assaillant.
+          livrent bataille jour après jour. Les pertes suivent le rapport des forces —
+          calculé arme contre arme — et frappent d'abord ce qui est mal apparié à ce qu'on
+          a en face. Le défenseur profite du terrain : montagnes, forêts et collines
+          coûtent cher à l'assaillant.
         </p>
         <p>
           Chaque corps porte une <strong>jauge de motivation</strong>, la barre colorée
           sous son pion. Elle <strong>monte à chaque victoire</strong> et tombe avec les
           défaites, les longues marches en pays ennemi et les pénuries. Une troupe motivée
-          frappe plus fort et marche plus vite&nbsp;; sous 22, elle rompt le combat et se
-          replie.
+          frappe plus fort et marche plus vite&nbsp;; sous 22, elle rompt et se replie.
         </p>
         <p class="note">
           Toutes les armées ne se valent pas, et l'interface ne vous dira pas lesquelles.
@@ -334,7 +370,7 @@
       </section>
 
       <section>
-        <h3>11. Le cabinet diplomatique</h3>
+        <h3>12. Le cabinet diplomatique</h3>
         <p>
           Le bouton <strong>Diplomatie</strong> ouvre le registre des puissances&nbsp;:
           leur relation avec vous, et l'<strong>estime</strong> qu'elles vous portent,
@@ -354,7 +390,7 @@
       </section>
 
       <section>
-        <h3>12. Occuper n'est pas annexer</h3>
+        <h3>13. Occuper n'est pas annexer</h3>
         <p>
           Une province tenue douze jours sans opposition passe sous votre
           <strong>occupation</strong>&nbsp;: elle vous rapporte, mais moitié moins, paie
@@ -377,7 +413,7 @@
       </section>
 
       <section>
-        <h3>13. Gagner la partie</h3>
+        <h3>14. Gagner la partie</h3>
         <p>Une partie se gagne de trois manières&nbsp;:</p>
         <ul>
           <li><strong>Par les traités</strong> — vous avez arraché des provinces à chacune
@@ -400,7 +436,7 @@
       </section>
 
       <section>
-        <h3>14. Le moral civil</h3>
+        <h3>15. Le moral civil</h3>
         <p>
           Chaque province a un moral qui monte avec le développement et tombe avec les
           pénuries, l'éloignement colonial et l'occupation militaire. Une population
@@ -409,7 +445,7 @@
       </section>
 
       <section>
-        <h3>15. Régler la partie</h3>
+        <h3>16. Régler et enregistrer la partie</h3>
         <p>
           Au menu, le volet <strong>Règles de la partie</strong> propose trois réglages.
           <strong>Doctrines égales</strong> annule les qualités militaires propres à
