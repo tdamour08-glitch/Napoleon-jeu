@@ -70,6 +70,8 @@ export function creerPartie(idEmpireJoueur) {
       // Provinces possédées en droit, occupation comprise. Distinct de
       // `territoires`, qui ne compte que celles effectivement tenues.
       souverainete: 0,
+      // Rayée de la carte : plus une seule province de droit.
+      eliminee: false,
       moral: (modele.doctrine ?? DOCTRINE_DEFAUT).moralInitial ?? DOCTRINE_DEFAUT.moralInitial,
     };
   }
@@ -115,7 +117,10 @@ export function creerPartie(idEmpireJoueur) {
     opinions: {},
     // Offres en attente de réponse du joueur, et premier jour de chaque guerre.
     offresAlliance: {},
-    offresArmistice: {},
+    offresPaix: {},
+    // Traités arrachés : traitesImposes[vainqueur][vaincu] = jour de signature.
+    traitesImposes: {},
+    fin: null,
     debutsDeGuerre: {},
     dernieresGuerres: {},
     equilibre: null,
@@ -193,6 +198,7 @@ export function recenserTerritoires(etat) {
     empire.souverainete = 0;
     empire.vivant = false;
   }
+  // Une puissance éliminée ne revient pas : ses provinces ont changé de maître.
   for (const id of etat.carte.ordre) {
     const territoire = etat.carte.territoires[id];
     const empire = etat.empires[controleur(territoire)];

@@ -46,8 +46,8 @@ permet de ne plus l'afficher au démarrage&nbsp;; il reste accessible par `H`.
 - [x] **Phase 4 — Intelligence artificielle** : les cabinets rivaux évaluent le
       rapport de forces, dévorent les voisins faibles, nouent des alliances,
       se liguent contre l'hégémon et savent demander un armistice.
-- [ ] **Phase 5 — Traités et victoire** : négociations qui cèdent les provinces
-      occupées, annexion, reddition, élimination totale.
+- [x] **Phase 5 — Traités et victoire** : négociations qui cèdent les provinces
+      occupées, annexion, reddition, élimination, conditions de victoire.
 - [ ] **Phase 6 — Finitions** : équilibrage, sauvegarde, aide en jeu.
 
 ## Architecture
@@ -65,7 +65,9 @@ js/core/armees.js     levées, marches, entretien, motivation
 js/core/combat.js     batailles, déroutes, occupation, insurrections
 js/core/diplomatie.js paix et guerre
 js/core/ia_militaire.js conduite des armées non jouées
-js/core/ia_strategie.js décisions des cabinets : alliances, guerres, armistices
+js/core/ia_strategie.js décisions des cabinets : alliances, guerres, paix
+js/core/traites.js    traités, annexion, reddition, élimination, victoire
+js/ui/traite.js       table des négociations
 js/core/tour.js       ordre des systèmes dans une journée
 js/data/langue.js     articles et élisions (« aux États-Unis », « d'Île-de-France »)
 js/core/moteur.js     boucle temps réel avec pause et vitesses
@@ -175,5 +177,40 @@ escarmouche entre deux principautés allemandes mettait la Perse en guerre contr
 États-Unis.
 
 Les propositions faites au joueur arrivent dans son **cabinet diplomatique** (`D`), qui
-sert aussi à proposer, rompre et déclarer. Un armistice arrête les combats mais laisse
-les occupations en place&nbsp;: la cession des provinces demandera un traité, en phase 5.
+sert aussi à proposer, rompre et déclarer.
+
+### Comment se gagne une partie
+
+L'occupation militaire ne change rien au droit. Pour qu'une province devienne vôtre, il
+faut un **traité**. La table des négociations laisse composer ses conditions — provinces
+annexées, provinces rendues, tribut — et affiche à chaque clause ce que le cabinet adverse
+est prêt à avaler. Sa tolérance dépend de sa lassitude, de ce qu'il a déjà perdu sur le
+terrain et du nombre de ses ennemis. Ce qui n'est pas annexé est évacué&nbsp;: la paix rend
+le terrain.
+
+Une puissance sans terre ni armée **capitule** sans condition&nbsp;; celle qui perd sa
+dernière province de droit **disparaît**. Trois chemins mènent à la victoire&nbsp;:
+
+- **les traités** — avoir arraché des provinces à chacune des six autres grandes
+  puissances, et n'être plus en guerre avec aucune&nbsp;;
+- **l'hégémonie** — posséder en droit 45&nbsp;% des provinces d'Europe&nbsp;;
+- **l'élimination** — ne laisser à aucune rivale la moindre province.
+
+Le seuil d'hégémonie a été fixé sur mesure&nbsp;: en partie simulée, les vainqueurs
+culminent entre 28 et 40&nbsp;% avant que la voie des traités ne l'emporte. Au-dessus de
+45&nbsp;%, la condition ne se déclencherait jamais.
+
+### La France est-elle jouable ?
+
+Question légitime, puisque toute l'Europe se ligue contre elle. Mesuré sur des parties
+simulées de vingt-cinq ans, toutes puissances pilotées&nbsp;:
+
+- la France atteint le **pic de possession européenne le plus élevé** (23,2&nbsp;% en
+  moyenne, à égalité avec l'Autriche et devant les cinq autres)&nbsp;;
+- elle **gagne effectivement** certaines parties, par la voie des traités&nbsp;;
+- le seul geste qu'un joueur fait et que l'intelligence artificielle néglige — signer un
+  traité dès que l'adversaire plie, au lieu de laisser la guerre s'enliser — fait passer
+  son pic de 23&nbsp;% à 25-32&nbsp;%.
+
+C'est le siège le plus difficile, parce qu'elle est désignée hégémon dès la première
+année et absorbe la première coalition. Ce n'est pas un handicap de règles.

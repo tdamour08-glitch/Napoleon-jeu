@@ -56,6 +56,12 @@
       <div class="militaire-ligne"><span class="militaire-valeur" id="valeur-reserves">—</span><span class="nom">réserves</span></div>
     </div>
 
+    <div id="bandeau-victoire" class="bandeau-victoire" title="Part des provinces d'Europe que vous possédez en droit. Le trait marque le seuil de victoire par hégémonie.">
+      <span class="titre">Europe</span>
+      <span class="barre"><i id="barre-victoire" style="width:0%"></i><span id="seuil-victoire" class="seuil"></span></span>
+      <span class="chiffre" id="chiffre-victoire">&mdash;</span>
+    </div>
+
     <div class="bandeau-outils">
       <button id="btn-economie" class="bouton-outil" title="Trésor et marché (E)">Économie</button>
       <button id="btn-diplomatie" class="bouton-outil" title="Cabinet diplomatique (D)">Diplomatie</button>
@@ -102,6 +108,28 @@
   </div>
 </div>
 
+<!-- ============ TABLE DES NÉGOCIATIONS ============ -->
+<div id="ecran-traite" class="voile-modale cache">
+  <div class="modale modale-etroite">
+    <button id="btn-fermer-traite" class="fermer-modale" title="Fermer (Échap)">×</button>
+    <h2>Table des négociations</h2>
+    <div id="corps-traite"></div>
+  </div>
+</div>
+
+<!-- ============ FIN DE PARTIE ============ -->
+<div id="ecran-fin" class="voile-modale cache">
+  <div class="modale modale-etroite ecran-fin">
+    <h2 id="titre-fin">&mdash;</h2>
+    <p id="detail-fin" class="modale-chapeau"></p>
+    <div id="bilan-fin"></div>
+    <div class="modale-pied">
+      <span class="note-fin">La partie est terminée&nbsp;; la carte reste consultable.</span>
+      <button id="btn-fermer-fin" class="bouton-principal">Contempler la carte</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ GUIDE ============ -->
 <div id="ecran-guide" class="voile-modale cache">
   <div class="modale">
@@ -115,13 +143,16 @@
     <div class="guide-grille">
       <section>
         <h3>1. Le but</h3>
-        <p>Une partie se gagne de trois manières&nbsp;:</p>
-        <ul>
-          <li><strong>la reddition</strong> d'un adversaire à bout de forces&nbsp;;</li>
-          <li><strong>un traité de paix</strong> qui vous cède ses provinces&nbsp;;</li>
-          <li><strong>l'élimination totale</strong> de la puissance rivale.</li>
-        </ul>
-        <p class="note">Les guerres arrivent en phase&nbsp;3&nbsp;; pour l'instant, bâtissez.</p>
+        <p>
+          L'emporter sur les six autres grandes puissances&nbsp;: leur arracher des
+          provinces par <strong>traité</strong>, dominer l'Europe, ou les faire
+          <strong>disparaître</strong>. Le détail des conditions se trouve au
+          paragraphe&nbsp;11.
+        </p>
+        <p class="note">
+          Vos rivales visent la même chose, et se ligueront contre celle d'entre vous qui
+          prendra trop d'avance. Y compris contre vous.
+        </p>
       </section>
 
       <section>
@@ -249,13 +280,48 @@
           Une province tenue douze jours sans opposition passe sous votre
           <strong>occupation</strong>&nbsp;: elle vous rapporte, mais moitié moins, paie
           mal l'impôt et ne fournit aucune recrue. Elle reste la propriété de son
-          souverain de droit tant qu'un <strong>traité</strong> ne vous l'a pas cédée —
-          ce sera l'objet de la phase 5.
+          souverain de droit, et se soulève au bout de trente jours si vous n'avez
+          aucun corps à portée.
+        </p>
+        <p>
+          Pour qu'elle devienne vôtre, il faut un <strong>traité</strong>. Dans le cabinet,
+          le bouton <strong>Négocier la paix</strong> ouvre la table des négociations&nbsp;:
+          vous y choisissez les provinces occupées que vous annexez, celles que vous vous
+          faites rendre, et le tribut que vous exigez. Le verdict du cabinet adverse se
+          recalcule à chaque clause, de sorte que vous voyez tout de suite ce qui passe.
+        </p>
+        <p class="note">
+          Ce que vous n'annexez pas est évacué&nbsp;: la paix rend le terrain. Et une
+          population annexée ne vous en sait aucun gré — son moral chute de vingt-cinq
+          points.
         </p>
       </section>
 
       <section>
-        <h3>11. Le moral civil</h3>
+        <h3>11. Gagner la partie</h3>
+        <p>Une partie se gagne de trois manières&nbsp;:</p>
+        <ul>
+          <li><strong>Par les traités</strong> — vous avez arraché des provinces à chacune
+              des six autres grandes puissances et n'êtes plus en guerre avec aucune&nbsp;;</li>
+          <li><strong>Par l'hégémonie</strong> — vous possédez en droit 45&nbsp;% des
+              provinces d'Europe. La jauge du bandeau suit votre progression&nbsp;;</li>
+          <li><strong>Par l'élimination</strong> — aucune autre grande puissance ne
+              possède plus la moindre province.</li>
+        </ul>
+        <p>
+          Une puissance sans terre ni armée <strong>capitule</strong> sans condition&nbsp;:
+          celui qui l'occupe annexe tout et prend la moitié de son trésor. Une puissance
+          qui perd sa dernière province de droit disparaît de la carte.
+        </p>
+        <p class="note">
+          Vous perdez si vous ne possédez plus aucune province. La voie la plus praticable
+          est celle des traités&nbsp;: battre chaque rivale à son tour et lui arracher une
+          province, plutôt que de conquérir l'Europe entière.
+        </p>
+      </section>
+
+      <section>
+        <h3>12. Le moral civil</h3>
         <p>
           Chaque province a un moral qui monte avec le développement et tombe avec les
           pénuries, l'éloignement colonial et l'occupation militaire. Une population
@@ -264,16 +330,10 @@
       </section>
 
       <section>
-        <h3>12. Ce qui vient ensuite</h3>
+        <h3>13. Ce qui vient ensuite</h3>
         <ul>
-          <li><strong>Phase 5</strong>&nbsp;: traités de paix qui cèdent les provinces occupées,
-              annexions, redditions et conditions de victoire.</li>
-          <li><strong>Phase 6</strong>&nbsp;: équilibrage, sauvegarde, finitions.</li>
+          <li><strong>Phase 6</strong>&nbsp;: équilibrage, sauvegarde de la partie, finitions.</li>
         </ul>
-        <p class="note">
-          Pour l'instant un armistice arrête les combats mais laisse les occupations en
-          place&nbsp;: aucune province ne change encore de souverain de droit.
-        </p>
       </section>
     </div>
 

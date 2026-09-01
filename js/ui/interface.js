@@ -21,6 +21,8 @@ import {
   TAILLE_CORPS,
 } from '../core/armees.js';
 import { couleurMotivation } from '../render/rendu.js';
+import { partEuropeenne } from '../core/traites.js';
+import { decrireTermes } from './traite.js';
 import {
   coutDeveloppement,
   dureeDeveloppement,
@@ -64,6 +66,9 @@ export class Interface {
       panneauDiplomatie: document.getElementById('panneau-diplomatie'),
       boutonDiplomatie: document.getElementById('btn-diplomatie'),
       panneauPuissances: document.getElementById('panneau-puissances'),
+      barreVictoire: document.getElementById('barre-victoire'),
+      seuilVictoire: document.getElementById('seuil-victoire'),
+      chiffreVictoire: document.getElementById('chiffre-victoire'),
       listePuissances: document.getElementById('liste-puissances'),
       journal: document.getElementById('journal'),
     };
@@ -126,16 +131,16 @@ export class Interface {
           return this.actions.centrerSurEmpire(idEmpire);
         case 'alliance':
           return this.actions.proposerAlliance(idEmpire);
-        case 'armistice':
-          return this.actions.proposerArmistice(idEmpire);
+        case 'negocier':
+          return this.actions.negocier(idEmpire);
         case 'rompre':
           return this.actions.rompreAlliance(idEmpire);
         case 'guerre':
           return this.actions.declarerGuerre(idEmpire);
         case 'accepter':
-          return this.actions.repondreOffre(idEmpire, cible.dataset.type, true);
+          return this.actions.repondreOffre(cible.dataset.cle, cible.dataset.type, true);
         case 'refuser':
-          return this.actions.repondreOffre(idEmpire, cible.dataset.type, false);
+          return this.actions.repondreOffre(cible.dataset.cle, cible.dataset.type, false);
         default:
           return undefined;
       }
@@ -207,6 +212,11 @@ export class Interface {
     this.el.troupes.textContent = `${Math.round(hommes)} 000`;
     this.el.reserves.textContent = `${Math.round(joueur.reserves)} 000`;
     this.el.reserves.style.color = joueur.reserves < 10 ? '#e07b6a' : '';
+
+    const europe = partEuropeenne(etat, joueur.id);
+    this.el.barreVictoire.style.width = `${Math.min(100, europe.part * 100).toFixed(1)}%`;
+    this.el.seuilVictoire.style.left = `${europe.seuil * 100}%`;
+    this.el.chiffreVictoire.textContent = `${europe.tenues} / ${europe.total}`;
 
     this.rafraichirPuissances();
     this.rafraichirJournal();
@@ -455,11 +465,11 @@ export class Interface {
 
     const offres = [
       ...Object.entries(etat.offresAlliance).map(([cle, o]) => ({ cle, ...o, type: 'alliance' })),
-      ...Object.entries(etat.offresArmistice).map(([cle, o]) => ({ cle, ...o, type: 'armistice' })),
+      ...Object.entries(etat.offresPaix).map(([cle, o]) => ({ cle, ...o, type: 'paix' })),
     ].filter((o) => o.cle.split('|').includes(moi));
 
     const signature = [
-      offres.map((o) => `${o.type}:${o.demandeur}`).join(','),
+      offres.map((o) => `${o.type}:${o.cle}`).join(','),
       puissances
         .map((e) => `${e.id}:${relation(etat, moi, e.id)}:${Math.round(opinion(etat, e.id, moi) / 5)}`)
         .join('|'),
@@ -471,17 +481,30 @@ export class Interface {
 
     const blocsOffres = offres
       .map((offre) => {
-        const demandeur = etat.empires[offre.demandeur];
-        const libelle =
-          offre.type === 'alliance'
-            ? `<strong>${demandeur.nom}</strong> vous propose une alliance.`
-            : `<strong>${demandeur.nom}</strong> demande un armistice.`;
+        if (offre.type === 'alliance') {
+          const demandeur = etat.empires[offre.demandeur];
+          return `
+            <div class="offre">
+              <p><strong>${demandeur.nom}</strong> vous propose une alliance.</p>
+              <div class="actions">
+                <button class="bouton-mini" data-action="accepter" data-type="alliance" data-cle="${offre.cle}">Accepter</button>
+                <button class="bouton-mini danger" data-action="refuser" data-type="alliance" data-cle="${offre.cle}">Refuser</button>
+              </div>
+            </div>`;
+        }
+        const traite = offre.traite;
+        const autre = etat.empires[traite.demandeur === moi ? traite.cible : traite.demandeur];
+        const jeGagne = traite.demandeur === moi;
+        const entete = jeGagne
+          ? `<strong>${autre.nom}</strong> demande la paix et offre&nbsp;:`
+          : `<strong>${autre.nom}</strong> propose la paix à ses conditions&nbsp;:`;
         return `
           <div class="offre">
-            <p>${libelle}</p>
+            <p>${entete}</p>
+            <ul class="termes">${decrireTermes(etat, traite).map((l) => `<li>${l}</li>`).join('')}</ul>
             <div class="actions">
-              <button class="bouton-mini" data-action="accepter" data-type="${offre.type}" data-empire="${offre.demandeur}">Accepter</button>
-              <button class="bouton-mini danger" data-action="refuser" data-type="${offre.type}" data-empire="${offre.demandeur}">Refuser</button>
+              <button class="bouton-mini" data-action="accepter" data-type="paix" data-cle="${offre.cle}">Signer</button>
+              <button class="bouton-mini danger" data-action="refuser" data-type="paix" data-cle="${offre.cle}">Refuser</button>
             </div>
           </div>`;
       })
@@ -505,7 +528,7 @@ export class Interface {
           <div class="actions-relation">
             ${
               enGuerre
-                ? `<button class="bouton-mini" data-action="armistice" data-empire="${e.id}">Demander un armistice</button>`
+                ? `<button class="bouton-mini" data-action="negocier" data-empire="${e.id}">Négocier la paix</button>`
                 : allie
                   ? `<button class="bouton-mini danger" data-action="rompre" data-empire="${e.id}">Rompre l'alliance</button>
                      <button class="bouton-mini danger" data-action="guerre" data-empire="${e.id}">Déclarer la guerre</button>`

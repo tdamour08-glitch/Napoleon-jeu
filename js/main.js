@@ -10,9 +10,10 @@ import {
   declarerGuerre,
   rompreAlliance,
   conclureAlliance,
-  conclureArmistice,
 } from './core/diplomatie.js';
-import { repondreAlliance, repondreArmistice } from './core/ia_strategie.js';
+import { repondreAlliance } from './core/ia_strategie.js';
+import { appliquerTraite, evaluerTraite, partEuropeenne, GRANDES_PUISSANCES } from './core/traites.js';
+import { TableDesNegociations } from './ui/traite.js';
 import { Moteur } from './core/moteur.js';
 import { Camera } from './render/camera.js';
 import { Rendu } from './render/rendu.js';
@@ -69,24 +70,30 @@ async function demarrer() {
       const reponse = repondreAlliance(etat, idCible, etat.joueur);
       ui.annoncerReponse(reponse.motif, reponse.accepte);
     },
-    proposerArmistice: (idCible) => {
-      const reponse = repondreArmistice(etat, idCible, etat.joueur);
-      ui.annoncerReponse(reponse.motif, reponse.accepte);
+    negocier: (idCible) => {
+      etat.enPause = true;
+      table.ouvrir(idCible);
     },
     rompreAlliance: (idCible) => {
       rompreAlliance(etat, etat.joueur, idCible);
     },
-    repondreOffre: (idDemandeur, type, accepte) => {
-      const cle = [etat.joueur, idDemandeur].sort().join('|');
-      const registre = type === 'alliance' ? etat.offresAlliance : etat.offresArmistice;
+    repondreOffre: (cle, type, accepte) => {
+      const registre = type === 'alliance' ? etat.offresAlliance : etat.offresPaix;
+      const offre = registre[cle];
       delete registre[cle];
+      if (!offre) return;
       if (!accepte) {
         ui.annoncerReponse('Vous déclinez la proposition.', false);
         return;
       }
-      if (type === 'alliance') conclureAlliance(etat, etat.joueur, idDemandeur);
-      else conclureArmistice(etat, etat.joueur, idDemandeur);
-      ui.annoncerReponse('Vous acceptez la proposition.', true);
+      if (type === 'alliance') {
+        conclureAlliance(etat, etat.joueur, offre.demandeur);
+        ui.annoncerReponse('Vous acceptez l\'alliance.', true);
+        return;
+      }
+      appliquerTraite(etat, offre.traite);
+      recalculerEconomie(etat);
+      ui.annoncerReponse('Le traité est signé.', true);
     },
     centrerSurEmpire: (idEmpire) => {
       const empire = etat.empires[idEmpire];
@@ -101,6 +108,15 @@ async function demarrer() {
     faireHalte: (id) => {
       const armee = etat.armees[id];
       if (armee) annulerMarche(armee);
+    },
+  });
+
+  const table = new TableDesNegociations(etat, {
+    signer: (traite) => {
+      if (!evaluerTraite(etat, traite).accepte) return;
+      appliquerTraite(etat, traite);
+      recalculerEconomie(etat);
+      ui.annoncerReponse('Le traité est signé.', true);
     },
   });
 
@@ -122,16 +138,22 @@ async function demarrer() {
   journaliser(etat, `<strong>${empireJoueur.nom}</strong> : vous en prenez la tête.`);
   journaliser(etat, 'Les chancelleries d\'Europe observent vos premiers pas.');
 
+  let finAffichee = false;
   const moteur = new Moteur(
     etat,
     (e) => jouerUnJour(e),
     (e, dt) => {
       rendu.dessiner(e, dt);
       ui.rafraichir();
+      if (e.fin && !finAffichee) {
+        finAffichee = true;
+        e.enPause = true;
+        afficherFinDePartie(e);
+      }
     },
   );
 
-  brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centrerSurTerritoire);
+  brancherControles(canvas, camera, rendu, etat, moteur, guide, table, ui, centrerSurTerritoire);
   window.addEventListener('resize', () => rendu.redimensionner());
 
   moteur.demarrer();
@@ -143,7 +165,45 @@ async function demarrer() {
 
 
 
-function brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centrerSurTerritoire) {
+/** Écran de fin : verdict, motif et bilan des grandes puissances. */
+function afficherFinDePartie(etat) {
+  const { type, vainqueur, detail } = etat.fin;
+  const empire = etat.empires[vainqueur];
+  const gagne = type !== 'defaite' && vainqueur === etat.joueur;
+
+  const titres = {
+    elimination: 'Victoire par élimination',
+    traites: 'Victoire par les traités',
+    hegemonie: 'Victoire par hégémonie',
+    defaite: 'Défaite',
+  };
+  const titre = gagne || type === 'defaite' ? titres[type] : `${empire.nom} l'emporte`;
+
+  document.getElementById('titre-fin').textContent = titre;
+  document.getElementById('titre-fin').style.color = gagne ? 'var(--or-clair)' : '#e07b6a';
+  document.getElementById('detail-fin').textContent = detail;
+
+  document.getElementById('bilan-fin').innerHTML = GRANDES_PUISSANCES.map((id) => {
+    const e = etat.empires[id];
+    const p = partEuropeenne(etat, id);
+    return `
+      <div class="ligne-bilan">
+        <span class="pastille" style="background:${e.couleur}"></span>
+        <span class="nom ${e.eliminee ? 'eliminee' : ''}">${e.nom}</span>
+        <span class="part">${e.eliminee ? 'éliminée' : `${p.tenues} prov. · ${Math.round(p.part * 100)} %`}</span>
+      </div>`;
+  }).join('');
+
+  // Une partie terminée referme les fenêtres encore ouvertes.
+  document.getElementById('ecran-traite').classList.add('cache');
+  document.getElementById('ecran-guide').classList.add('cache');
+  document.getElementById('ecran-fin').classList.remove('cache');
+}
+
+function brancherControles(canvas, camera, rendu, etat, moteur, guide, table, ui, centrerSurTerritoire) {
+  document.getElementById('btn-fermer-fin').addEventListener('click', () => {
+    document.getElementById('ecran-fin').classList.add('cache');
+  });
   let glisse = false;
   let deplace = false;
   let dernierX = 0;
@@ -230,8 +290,12 @@ function brancherControles(canvas, camera, rendu, etat, moteur, guide, ui, centr
   }
 
   window.addEventListener('keydown', (ev) => {
-    // Le guide capte Échap en priorité.
-    if (guide.ouvert && ev.code === 'Escape') {
+    // Les fenêtres modales captent Échap en priorité.
+    if (ev.code === 'Escape' && table.ouvert) {
+      table.fermer();
+      return;
+    }
+    if (ev.code === 'Escape' && guide.ouvert) {
       guide.fermer();
       return;
     }

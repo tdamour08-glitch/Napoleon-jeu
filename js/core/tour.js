@@ -11,8 +11,11 @@ import { appliquerJourMilitaire } from './armees.js';
 import { appliquerJourCombat } from './combat.js';
 import { conduireArmeesBots } from './ia_militaire.js';
 import { conduireDiplomatieBots, suivreGuerres, expirerOffres } from './ia_strategie.js';
+import { verifierRedditions, verifierEliminations, verifierVictoire } from './traites.js';
 
 export function jouerUnJour(etat) {
+  // Une partie terminée ne se poursuit pas.
+  if (etat.fin) return;
   avancerJour(etat);
 
   // 1. Ressources, chantiers, moral des provinces, réserves d'hommes.
@@ -30,6 +33,15 @@ export function jouerUnJour(etat) {
   conduireDiplomatieBots(etat);
   gererEconomieBots(etat);
   conduireArmeesBots(etat);
+
+  // 5. Capitulations, disparitions, et fin de partie.
+  verifierRedditions(etat);
+  if (etat.economieARecalculer) {
+    recalculerEconomie(etat);
+    etat.economieARecalculer = false;
+  }
+  verifierEliminations(etat);
+  verifierVictoire(etat);
 
   // Une province qui change de mains bouleverse les bilans.
   if (etat.economieARecalculer) {

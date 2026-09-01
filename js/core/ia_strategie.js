@@ -27,6 +27,16 @@ import {
   conclureArmistice,
 } from './diplomatie.js';
 import { puissance as puissanceAuCombat } from './combat.js';
+import {
+  provincesNegociables,
+  traiteVierge,
+  valeurProvince,
+  coutTermes,
+  toleranceCession,
+  evaluerTraite,
+  appliquerTraite,
+  lassitude,
+} from './traites.js';
 import { avecArticle } from '../data/langue.js';
 
 /** Une délibération tous les quinze jours par puissance. */
@@ -51,8 +61,16 @@ const PROIE = 0.6;
 /** Jours de répit qu'une puissance s'accorde entre deux guerres qu'elle ouvre. */
 const REPIT = 270;
 
-/** Jours de guerre avant qu'un armistice devienne envisageable. */
+/** Jours de guerre avant qu'une paix de lassitude devienne envisageable. */
 const GUERRE_MINIMALE = 200;
+/**
+ * Mais une campagne décisive se conclut sans attendre : quand l'adversaire
+ * est déjà brisé, on signe. Sans ce raccourci, une guerre gagnée en trois
+ * mois reste ouverte assez longtemps pour qu'une coalition se reforme, et
+ * les victoires nettes ne rapportent rien.
+ */
+const GUERRE_MINIMALE_DECISIVE = 60;
+const LASSITUDE_DECISIVE = 0.55;
 
 /* ------------------------------------------------------------
    Évaluation du rapport de forces
@@ -178,7 +196,7 @@ function majOpinions(etat, empire, puissances, equilibre) {
 
 /** Une puissance décide de sa politique pour les quinze jours à venir. */
 function deliberer(etat, empire, equilibre) {
-  if (chercherArmistice(etat, empire, equilibre)) return;
+  if (chercherPaix(etat, empire, equilibre)) return;
   if (chercherAlliance(etat, empire, equilibre)) return;
   chercherGuerre(etat, empire, equilibre);
 }
@@ -188,46 +206,73 @@ function deliberer(etat, empire, equilibre) {
    ------------------------------------------------------------ */
 
 /**
- * Une guerre longue et perdue finit par lasser. On ne signe que si
- * l'adversaire est lui aussi épuisé, ou s'il a déjà obtenu gain de cause.
+ * Une guerre longue et perdue finit par lasser. Le camp qui a l'avantage
+ * dicte ses conditions ; l'autre accepte s'il est à bout. Les provinces
+ * cédées changent alors de souverain pour de bon.
  */
-function chercherArmistice(etat, empire, equilibre) {
+function chercherPaix(etat, empire, equilibre) {
   for (const idEnnemi of ennemis(etat, empire.id)) {
-    const debut = etat.debutsDeGuerre?.[cleGuerre(empire.id, idEnnemi)] ?? 0;
-    if (etat.jourEcoule - debut < GUERRE_MINIMALE) continue;
-
+    const adversaire = etat.empires[idEnnemi];
     const mienne = lassitude(etat, empire, equilibre);
-    const sienne = lassitude(etat, etat.empires[idEnnemi], equilibre);
-    if (mienne < 0.5) continue;
+    const sienne = lassitude(etat, adversaire, equilibre);
 
-    // L'adversaire accepte s'il est lui aussi à bout, ou s'il a déjà gagné.
-    const adversaireSatisfait = sienne > 0.4 || provincesOccupeesPar(etat, idEnnemi, empire.id) > 0;
-    if (!adversaireSatisfait) continue;
+    const decisive = Math.max(mienne, sienne) > LASSITUDE_DECISIVE;
+    const attente = decisive ? GUERRE_MINIMALE_DECISIVE : GUERRE_MINIMALE;
+    const debut = etat.debutsDeGuerre?.[cleGuerre(empire.id, idEnnemi)] ?? 0;
+    if (etat.jourEcoule - debut < attente) continue;
 
-    if (etat.empires[idEnnemi].estJoueur) {
-      // On ne signe pas à la place du joueur : on lui propose.
-      proposerArmisticeAuJoueur(etat, empire.id, idEnnemi);
+    // Nul ne négocie tant que les deux camps se croient frais.
+    if (mienne < 0.4 && sienne < 0.4) continue;
+
+    // Celui qui souffre le moins et occupe le plus tient la plume.
+    const mesGains = provincesOccupeesPar(etat, empire.id, idEnnemi);
+    const sesGains = provincesOccupeesPar(etat, idEnnemi, empire.id);
+    const jeDicte = mesGains > sesGains || (mesGains === sesGains && mienne < sienne);
+    const demandeur = jeDicte ? empire.id : idEnnemi;
+    const cible = jeDicte ? idEnnemi : empire.id;
+
+    const traite = construireTraite(etat, demandeur, cible);
+
+    if (etat.empires[cible].estJoueur || etat.empires[demandeur].estJoueur) {
+      proposerPaixAuJoueur(etat, traite);
       continue;
     }
-    conclureArmistice(etat, empire.id, idEnnemi);
+    const verdict = evaluerTraite(etat, traite);
+    if (!verdict.accepte) continue;
+    appliquerTraite(etat, traite);
     return true;
   }
   return false;
 }
 
-/** De 0 (frais) à 1 (exsangue). */
-function lassitude(etat, empire, equilibre) {
-  const hommes = effectifTotal(etat, empire.id);
-  const potentiel = Math.max(10, empire.reservesMax);
-  let score = 0;
-  score += Math.max(0, 1 - hommes / potentiel) * 0.5;
-  score += empire.penuries.or ? 0.25 : 0;
-  const perdues = etat.carte.ordre.filter(
-    (id) => etat.carte.territoires[id].maitre === empire.id && etat.carte.territoires[id].occupant,
-  ).length;
-  score += Math.min(0.4, perdues * 0.12);
-  if ((equilibre.parts[empire.id] ?? 0) < 0.03) score += 0.2;
-  return Math.min(1, score);
+/**
+ * Conditions les plus dures que le vaincu puisse encore avaler : on ajoute
+ * les provinces occupées par ordre de valeur tant qu'il reste dans ses
+ * limites, plutôt que de tout exiger et d'essuyer un refus.
+ */
+function construireTraite(etat, demandeur, cible) {
+  const traite = traiteVierge(demandeur, cible);
+  const { annexables, restituables } = provincesNegociables(etat, demandeur, cible);
+  traite.restitutions = restituables;
+
+  const tolerance = toleranceCession(etat, cible, demandeur);
+  const candidates = annexables
+    .map((id) => ({ id, valeur: valeurProvince(etat.carte.territoires[id]) }))
+    .sort((a, b) => b.valeur - a.valeur);
+
+  for (const { id } of candidates) {
+    traite.annexions.push(id);
+    if (coutTermes(etat, traite) > tolerance) traite.annexions.pop();
+  }
+  // Ce qui reste de marge se prend en or.
+  const marge = tolerance - coutTermes(etat, traite);
+  if (marge > 1) {
+    traite.tribut = Math.min(
+      Math.round(marge * 90),
+      Math.round(etat.empires[cible].stocks.or * 0.4),
+    );
+  }
+  return traite;
 }
 
 function provincesOccupeesPar(etat, occupant, victime) {
@@ -240,15 +285,16 @@ function provincesOccupeesPar(etat, occupant, victime) {
 
 const cleGuerre = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
-/** Le joueur reçoit l'offre dans son journal ; elle reste ouverte un temps. */
-function proposerArmisticeAuJoueur(etat, demandeur, joueur) {
-  const cle = cleGuerre(demandeur, joueur);
-  if (etat.offresArmistice[cle]) return;
-  etat.offresArmistice[cle] = { demandeur, expire: etat.jourEcoule + 90 };
+/** Le joueur reçoit les conditions dans son cabinet ; elles restent ouvertes un temps. */
+function proposerPaixAuJoueur(etat, traite) {
+  const cle = cleGuerre(traite.demandeur, traite.cible);
+  if (etat.offresPaix[cle]) return;
+  etat.offresPaix[cle] = { traite, expire: etat.jourEcoule + 120 };
+  const autre = etat.empires[traite.cible].estJoueur ? traite.demandeur : traite.cible;
   journaliser(
     etat,
-    `<strong>${etat.empires[demandeur].nom}</strong> propose un armistice. ` +
-      `Sa réponse vous attend dans le cabinet diplomatique.`,
+    `<strong>${etat.empires[autre].nom}</strong> fait porter des conditions de paix. ` +
+      `Elles vous attendent dans le cabinet diplomatique.`,
   );
 }
 
@@ -462,31 +508,6 @@ export function repondreAlliance(etat, idBot, idJoueur) {
   return { accepte: true, motif: `${bot.nom} accepte l'alliance.` };
 }
 
-/** Une puissance répond à une offre d'armistice du joueur. */
-export function repondreArmistice(etat, idBot, idJoueur) {
-  if (!sontEnGuerre(etat, idBot, idJoueur)) {
-    return { accepte: false, motif: 'Nous ne sommes pas en guerre.' };
-  }
-  const debut = etat.debutsDeGuerre?.[cleGuerre(idBot, idJoueur)] ?? 0;
-  if (etat.jourEcoule - debut < 60) {
-    return { accepte: false, motif: 'La guerre vient à peine de commencer.' };
-  }
-  const equilibre = etat.equilibre ?? { parts: {}, scores: {} };
-  const bot = etat.empires[idBot];
-  const usure = lassitude(etat, bot, equilibre);
-  const gains = provincesOccupeesPar(etat, idBot, idJoueur);
-  const pertes = provincesOccupeesPar(etat, idJoueur, idBot);
-
-  if (usure > 0.45 || pertes > gains) {
-    conclureArmistice(etat, idBot, idJoueur);
-    return { accepte: true, motif: `${bot.nom} accepte l'armistice.` };
-  }
-  if (gains > 0 && usure > 0.25) {
-    conclureArmistice(etat, idBot, idJoueur);
-    return { accepte: true, motif: `${bot.nom} se satisfait de ses gains et accepte.` };
-  }
-  return { accepte: false, motif: 'L\'ennemi se croit encore en mesure de vaincre.' };
-}
 
 /* ------------------------------------------------------------
    Suivi des dates de guerre
@@ -508,7 +529,7 @@ export function suivreGuerres(etat) {
 
 /** Retire les offres restées sans réponse. */
 export function expirerOffres(etat) {
-  for (const registre of [etat.offresAlliance, etat.offresArmistice]) {
+  for (const registre of [etat.offresAlliance, etat.offresPaix]) {
     for (const [cle, offre] of Object.entries(registre)) {
       if (etat.jourEcoule > offre.expire) delete registre[cle];
     }

@@ -167,23 +167,23 @@ html, body {
   height: 62px;
   display: flex;
   align-items: center;
-  gap: 22px;
-  padding: 0 16px;
+  gap: 13px;
+  padding: 0 12px;
 }
 
-.bandeau-empire { display: flex; align-items: center; gap: 10px; min-width: 210px; }
+.bandeau-empire { display: flex; align-items: center; gap: 9px; min-width: 178px; }
 .ecusson { width: 20px; height: 26px; border-radius: 3px 3px 8px 8px; display: inline-block; border: 1px solid rgba(255,255,255,.25); }
 .bandeau-titre { font-size: 17px; color: var(--or-clair); }
 .bandeau-sous { font-size: 12px; color: var(--texte-doux); }
 
-.bandeau-ressources { display: flex; gap: 16px; flex: 1; flex-wrap: wrap; }
+.bandeau-ressources { display: flex; gap: 11px; flex: 1; flex-wrap: nowrap; }
 .ressource { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .ressource .pastille { width: 11px; height: 11px; border-radius: 2px; }
 .ressource .valeur { color: var(--texte); font-variant-numeric: tabular-nums; }
-.ressource .nom { color: var(--texte-doux); font-size: 12px; }
+.ressource .nom { color: var(--texte-doux); font-size: 11px; }
 
-.bandeau-temps { display: flex; align-items: center; gap: 14px; }
-.date-jeu { font-size: 15px; color: var(--or-clair); min-width: 140px; text-align: right; font-variant-numeric: tabular-nums; }
+.bandeau-temps { display: flex; align-items: center; gap: 10px; }
+.date-jeu { font-size: 14px; color: var(--or-clair); min-width: 122px; text-align: right; font-variant-numeric: tabular-nums; }
 .controles-temps { display: flex; gap: 5px; }
 
 .bouton-temps {
@@ -303,7 +303,7 @@ html, body {
 .bandeau-outils { display: flex; gap: 6px; }
 
 .bouton-outil {
-  padding: 7px 12px;
+  padding: 7px 10px;
   font-family: inherit; font-size: 13px;
   color: var(--texte-doux);
   background: var(--nuit-3);
@@ -317,7 +317,7 @@ html, body {
 /* Ressources du bandeau : stock et solde du jour */
 .ressource { flex-direction: column; align-items: flex-start; gap: 1px; }
 .ressource .ligne-haute { display: flex; align-items: center; gap: 6px; }
-.ressource .solde { font-size: 11px; color: var(--vert); font-variant-numeric: tabular-nums; padding-left: 17px; }
+.ressource .solde { font-size: 10.5px; color: var(--vert); font-variant-numeric: tabular-nums; padding-left: 17px; white-space: nowrap; }
 .ressource .solde.negatif { color: #e07b6a; }
 .ressource.penurie .valeur { color: #e07b6a; }
 .ressource.penurie .pastille { box-shadow: 0 0 0 2px rgba(224,123,106,.5); }
@@ -442,8 +442,8 @@ html, body {
 
 .bandeau-militaire {
   display: flex; flex-direction: column; gap: 2px;
-  padding-left: 14px; border-left: 1px solid var(--bordure);
-  min-width: 128px;
+  padding-left: 11px; border-left: 1px solid var(--bordure);
+  min-width: 112px;
 }
 .militaire-ligne { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
 .militaire-valeur { font-size: 14px; color: var(--texte); font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
@@ -570,3 +570,71 @@ html, body {
 }
 .reponse-diplomatique.oui { border-left-color: var(--vert); }
 .reponse-diplomatique.non { border-left-color: #b6432f; }
+
+/* ------------------------------------------------------------
+   Phase 5 — traités, reddition, fin de partie
+   ------------------------------------------------------------ */
+
+.modale-etroite { width: min(620px, 100%); }
+
+.traite-entete { margin: 0 0 16px; font-size: 13.5px; color: var(--texte-doux); line-height: 1.6; }
+.traite-entete strong { color: var(--texte); }
+
+.traite-section { margin-bottom: 16px; }
+.traite-section h3 {
+  margin: 0 0 8px; font-size: 12px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--texte-doux);
+}
+.traite-vide { font-size: 13px; color: #8c93a5; font-style: italic; margin: 0; }
+
+.clause {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 8px; margin-bottom: 3px;
+  background: rgba(255,255,255,.04); border-radius: 3px;
+  font-size: 13px; cursor: pointer;
+}
+.clause:hover { background: rgba(255,255,255,.08); }
+.clause input { accent-color: var(--or); }
+.clause .nom-province { flex: 1; }
+.clause .valeur-province { color: var(--texte-doux); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+.tribut { display: flex; align-items: center; gap: 12px; }
+.tribut input[type="range"] { flex: 1; accent-color: var(--or); }
+.tribut .montant { min-width: 92px; text-align: right; font-variant-numeric: tabular-nums; color: var(--or-clair); }
+
+.verdict {
+  margin: 14px 0 0; padding: 11px 13px;
+  border-radius: 4px; font-size: 13px; line-height: 1.55;
+  border: 1px solid var(--bordure); background: rgba(255,255,255,.04);
+}
+.verdict.acceptable { border-color: rgba(76,154,90,.6); background: rgba(76,154,90,.12); }
+.verdict.refus { border-color: rgba(182,67,47,.6); background: rgba(182,67,47,.12); }
+.verdict .jauge { height: 6px; margin-top: 8px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+.verdict .jauge i { display: block; height: 100%; }
+
+.actions-traite { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+/* Offres reçues, dans le cabinet */
+.offre .termes { margin: 0 0 8px; padding-left: 16px; font-size: 12px; color: var(--texte-doux); }
+.offre .termes li { margin-bottom: 2px; }
+
+/* Fin de partie */
+.ecran-fin { text-align: center; }
+.ecran-fin h2 { font-size: 34px; letter-spacing: 4px; }
+.ecran-fin .modale-chapeau { margin-left: auto; margin-right: auto; }
+.ecran-fin .modale-pied { justify-content: center; gap: 24px; }
+.note-fin { font-size: 12.5px; color: var(--texte-doux); font-style: italic; }
+#bilan-fin { display: flex; flex-direction: column; gap: 4px; max-width: 380px; margin: 0 auto 8px; }
+#bilan-fin .ligne-bilan { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+#bilan-fin .pastille { width: 10px; height: 10px; border-radius: 2px; }
+#bilan-fin .nom { flex: 1; text-align: left; }
+#bilan-fin .part { color: var(--or-clair); font-variant-numeric: tabular-nums; }
+#bilan-fin .eliminee { color: #8c93a5; text-decoration: line-through; }
+
+/* Progression vers la victoire, dans le bandeau */
+.bandeau-victoire { display: flex; flex-direction: column; gap: 2px; min-width: 88px; padding-left: 11px; border-left: 1px solid var(--bordure); }
+.bandeau-victoire .titre { font-size: 11px; color: var(--texte-doux); }
+.bandeau-victoire .barre { height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; position: relative; }
+.bandeau-victoire .barre i { display: block; height: 100%; background: linear-gradient(90deg, var(--or), var(--or-clair)); }
+.bandeau-victoire .barre .seuil { position: absolute; top: -1px; bottom: -1px; width: 2px; background: rgba(255,255,255,.6); }
+.bandeau-victoire .chiffre { font-size: 11px; color: var(--texte-doux); font-variant-numeric: tabular-nums; }
