@@ -84,12 +84,20 @@ export class Rendu {
       this.tracerAnneaux(ctx, territoire, true, true);
     }
 
-    // 4. Frontières.
+    // 4. Provinces qui grondent : hachures d'autant plus denses que la
+    //    révolte est haute.
+    for (const territoire of visibles) {
+      const revolte = territoire.revolte ?? 0;
+      if (revolte < 35) continue;
+      this.hachurer(ctx, territoire, revolte);
+    }
+
+    // 5. Frontières.
     ctx.lineWidth = Math.max(0.5, Math.min(1.4, 0.8 * cam.zoom));
     ctx.strokeStyle = COULEUR_FRONTIERE;
     for (const territoire of visibles) this.tracerAnneaux(ctx, territoire, true);
 
-    // 5. Survol et sélection.
+    // 6. Survol et sélection.
     if (etat.survol && etat.survol !== etat.selection) {
       this.souligner(ctx, etat.carte.territoires[etat.survol], 'rgba(255,255,255,0.35)', 1.5);
     }
@@ -98,10 +106,10 @@ export class Rendu {
       this.souligner(ctx, etat.carte.territoires[etat.selection], `rgba(232,207,122,${clignote.toFixed(2)})`, 2.4);
     }
 
-    // 6. Capitales et noms.
+    // 7. Capitales et noms.
     this.dessinerMarqueurs(ctx, etat, visibles);
 
-    // 7. Armées, marches et batailles, au premier plan.
+    // 8. Armées, marches et batailles, au premier plan.
     this.dessinerRouteSelectionnee(ctx, etat);
     this.dessinerBatailles(ctx, etat);
     this.dessinerArmees(ctx, etat);
@@ -222,6 +230,41 @@ export class Rendu {
       const t = etat.carte.territoires[armee.route.chemin[i]];
       const [x, y] = cam.versEcran(t.centre[0], t.centre[1]);
       ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /**
+   * Hachures diagonales sur une province mécontente. Elles s'épaississent
+   * avec la jauge, si bien qu'on lit la carte d'un coup d'œil.
+   */
+  hachurer(ctx, territoire, revolte) {
+    const [x0, y0, x1, y1] = territoire.bornes;
+    const cam = this.camera;
+    const [ex0, ey0] = cam.versEcran(x0, y0);
+    const [ex1, ey1] = cam.versEcran(x1, y1);
+    const pas = Math.max(6, 22 - revolte / 6);
+
+    ctx.save();
+    ctx.beginPath();
+    for (const anneau of territoire.anneaux) {
+      for (let i = 0; i < anneau.length; i++) {
+        const [x, y] = cam.versEcran(anneau[i][0], anneau[i][1]);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+    }
+    ctx.clip();
+
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = `rgba(226, 92, 66, ${(0.18 + (revolte / 100) * 0.4).toFixed(2)})`;
+    ctx.beginPath();
+    const etendue = ex1 - ex0 + (ey1 - ey0);
+    for (let d = -etendue; d < etendue; d += pas) {
+      ctx.moveTo(ex0 + d, ey0);
+      ctx.lineTo(ex0 + d + (ey1 - ey0), ey1);
     }
     ctx.stroke();
     ctx.restore();

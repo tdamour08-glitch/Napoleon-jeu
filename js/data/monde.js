@@ -135,6 +135,60 @@ export const TERRITOIRES = [
 ];
 
 /**
+ * Cultures des provinces qui ne se reconnaissent pas dans le drapeau de leur
+ * souverain de 1805. Toutes les autres prennent pour culture celle de ce
+ * souverain, et forment donc son noyau.
+ *
+ * Une culture qui correspond à un empire vivant lui donne un droit à
+ * revendiquer la province ; les autres — « ita », « irl », « hon »… — n'ont
+ * pas d'État pour les porter : elles ne produisent que du ressentiment.
+ */
+export const CULTURES_PROVINCES = {
+  // Îles Britanniques : l'Écosse est dans l'Union depuis 1707 et Londres
+  // l'accepte pour sienne ; l'Union de 1801 n'a pas fait des Irlandais des Anglais.
+  ecosse: 'eco',
+  irlande: 'irl',
+
+  // L'Empire français tient des pays qui ne sont pas la France.
+  flandre: 'nee',
+  hollande: 'nee',
+  rhenanie: 'all',
+  piemont: 'ita',
+  lombardie: 'ita',
+  indes_orientales: 'jav',
+
+  // Le Canada français sous drapeau britannique.
+  canada: 'fra',
+  bengale: 'mar',
+  cap: 'afr',
+  nouvelle_hollande: 'aus',
+
+  // La monarchie des Habsbourg, mosaïque de nations.
+  venetie: 'ita',
+  illyrie: 'ill',
+  galicie: 'var',
+
+  // La Silésie, prise à l'Autriche par Frédéric II : Vienne ne l'a pas oubliée.
+  silesie: 'aut',
+
+  // L'Empire russe et ses marches.
+  lituanie: 'var',
+  crimee: 'ott',
+
+  // Les provinces chrétiennes et l'Égypte mamelouke de la Porte.
+  grece: 'gre',
+  serbie: 'ser',
+  egypte: 'egy',
+
+  // Les vice-royautés espagnoles, où gronde le sentiment créole.
+  mexique: 'amer',
+  perou: 'amer',
+  rio_plata: 'amer',
+  cuba: 'amer',
+  bresil: 'amer',
+};
+
+/**
  * Provinces d'Europe, au sens des conditions de victoire.
  * La liste est explicite plutôt que déduite de la géographie : la limite
  * de l'Europe est une convention, pas une donnée.

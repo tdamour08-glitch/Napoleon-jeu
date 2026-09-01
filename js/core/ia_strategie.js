@@ -40,6 +40,7 @@ import {
   lassitude,
 } from './traites.js';
 import { avecArticle } from '../data/langue.js';
+import { revendicationsDe, revendicationsContre } from './revolte.js';
 
 /** Une délibération tous les quinze jours par puissance. */
 const PERIODE = 15;
@@ -196,6 +197,9 @@ function majOpinions(etat, empire, puissances, equilibre) {
         etat.carte.territoires[id].occupant === autre.id,
     ).length;
     cible -= occupees * 18;
+
+    // Ni qui tient des provinces qui se réclament de nous.
+    cible -= revendicationsDe(etat, empire.id, autre.id).length * 16;
 
     cible = Math.max(-100, Math.min(100, cible));
     const courante = opinion(etat, empire.id, autre.id);
@@ -445,22 +449,30 @@ function chercherGuerre(etat, empire, equilibre) {
       const contreHegemon =
         autre.id === equilibre.hegemon && opinion(etat, empire.id, autre.id) < -50;
 
+      // Une province qui gronde et se réclame de nous vaut un casus belli.
+      const revendiquees = revendicationsDe(etat, empire.id, autre.id).length;
       return {
         empire: autre,
         defense,
+        revendiquees,
         contreHegemon,
         exigence: contreHegemon ? 0.7 : regle.audace,
         force: maPuissance + renforts,
-        proie: score < monScore * regle.proie,
+        proie: score < monScore * regle.proie || revendiquees > 0,
         rancune: opinion(etat, empire.id, autre.id) < SEUIL_HOSTILITE,
-        appat: score / (defense + 1),
+        appat: (score / (defense + 1)) * (1 + revendiquees * 0.5),
       };
     })
     .filter(
       ({ defense, proie, rancune, exigence, force }) =>
         (proie || rancune) && force > defense * exigence,
     )
-    .sort((a, b) => Number(b.contreHegemon) - Number(a.contreHegemon) || b.appat - a.appat);
+    .sort(
+      (a, b) =>
+        Number(b.contreHegemon) - Number(a.contreHegemon) ||
+        b.revendiquees - a.revendiquees ||
+        b.appat - a.appat,
+    );
 
   if (cibles.length === 0) return false;
   const choix = cibles[0];

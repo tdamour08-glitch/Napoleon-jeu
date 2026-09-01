@@ -8,6 +8,8 @@
 export const EMPIRES = [
   {
     id: 'fra',
+    // La Révolution a fait de la France l'État le plus centralisé d'Europe : préfets, Code civil, une seule loi.
+    centralisation: 1.35,
     // La Révolution a aboli les privilèges, ouvert les écoles centrales et les hospices : trois réformes déjà acquises.
     heritage: ['abolition', 'sante', 'instruction'], article: "l'",
     nom: 'Empire français',
@@ -26,6 +28,9 @@ export const EMPIRES = [
   },
   {
     id: 'gbr',
+    // Trois royaumes et un empire : l'Écosse est dans l'Union, l'Irlande ne s'y résout pas, et les colonies sont loin.
+    centralisation: 0.75,
+    culturesAcceptees: ['eco'],
     // La Royal Society et les manufactures ; surtout, la Banque d'Angleterre, qui lui ouvre un crédit sans rival.
     heritage: ['instruction'], article: "le",
     nom: 'Royaume-Uni',
@@ -38,6 +43,8 @@ export const EMPIRES = [
   },
   {
     id: 'pru',
+    // Une administration militaire, efficace et courte.
+    centralisation: 1.15,
     // Le système cantonal et l'école obligatoire depuis Frédéric II.
     heritage: ['conscription', 'instruction'], article: "le",
     nom: 'Royaume de Prusse',
@@ -50,6 +57,9 @@ export const EMPIRES = [
   },
   {
     id: 'aut',
+    // Une mosaïque de nations que la couronne tient de haute lutte ; la Bohême et la Hongrie sont intégrées, le reste non.
+    centralisation: 0.78,
+    culturesAcceptees: ['boh', 'hon'],
     // Les routes, les canaux et la bureaucratie léguées par Joseph II.
     heritage: ['travaux'], article: "l'",
     nom: 'Empire d\'Autriche',
@@ -62,6 +72,8 @@ export const EMPIRES = [
   },
   {
     id: 'rus',
+    // L'autocratie, mais des distances immenses.
+    centralisation: 1.05,
     // Le recrutement par levées : une réserve d'hommes que nul ne peut égaler.
     heritage: ['conscription'], article: "l'",
     nom: 'Empire russe',
@@ -74,6 +86,8 @@ export const EMPIRES = [
   },
   {
     id: 'esp',
+    // Les Bourbons ont unifié l'administration ; les vice-royautés restent lointaines.
+    centralisation: 0.95,
     // Les réformes bourboniennes : routes royales, canaux et arsenaux.
     heritage: ['travaux'], article: "le",
     nom: 'Royaume d\'Espagne',
@@ -86,6 +100,8 @@ export const EMPIRES = [
   },
   {
     id: 'ott',
+    // Millets et pachaliks : la Porte règne plus qu'elle n'administre.
+    centralisation: 0.75,
     // Les fondations pieuses entretiennent hospices et fontaines dans tout l'empire.
     heritage: ['sante'], article: "l'",
     nom: 'Empire ottoman',

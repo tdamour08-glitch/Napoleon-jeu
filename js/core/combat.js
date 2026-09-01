@@ -26,8 +26,6 @@ const TAUX_PERTES = 0.06;
 const PERTES_MAX = 0.28;
 /** Jours de présence nécessaires pour occuper une province vidée de défenseurs. */
 const DUREE_OCCUPATION = 12;
-/** Jours sans garnison à portée avant qu'une province occupée ne se soulève. */
-const DUREE_INSURRECTION = 30;
 
 /** Bonus défensif du terrain. */
 const DEFENSE_TERRAIN = {
@@ -84,47 +82,8 @@ export function appliquerJourCombat(etat) {
   for (const id of etat.carte.ordre) {
     resoudreProvince(etat, etat.carte.territoires[id]);
   }
-  for (const id of etat.carte.ordre) {
-    avancerInsurrection(etat, etat.carte.territoires[id]);
-  }
 }
 
-/**
- * Une occupation ne tient que par la force. Sans garnison sur place ni
- * corps à portée immédiate, la province finit par chasser l'occupant —
- * faute de quoi une puissance exsangue conserverait un empire fantôme.
- */
-function avancerInsurrection(etat, territoire) {
-  if (!territoire.occupant || territoire.occupant === territoire.maitre) {
-    territoire.insurrection = 0;
-    return;
-  }
-  const souverain = etat.empires[territoire.maitre];
-  if (!souverain || souverain.souverainete === 0) {
-    territoire.insurrection = 0;
-    return;
-  }
-
-  const occupant = territoire.occupant;
-  const tenue =
-    armeesDans(etat, territoire.id).some((a) => a.empire === occupant) ||
-    territoire.voisins.some((v) => armeesDans(etat, v).some((a) => a.empire === occupant));
-  if (tenue) {
-    territoire.insurrection = 0;
-    return;
-  }
-
-  territoire.insurrection = (territoire.insurrection ?? 0) + 1;
-  if (territoire.insurrection < DUREE_INSURRECTION) return;
-
-  territoire.insurrection = 0;
-  territoire.occupant = null;
-  journaliser(
-    etat,
-    `<strong>${territoire.nom}</strong> se soulève et chasse la garnison ${genitif(etat.empires[occupant])}.`,
-  );
-  etat.economieARecalculer = true;
-}
 
 function resoudreProvince(etat, territoire) {
   const presentes = armeesDans(etat, territoire.id);

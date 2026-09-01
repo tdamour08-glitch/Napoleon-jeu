@@ -8,6 +8,7 @@
 
 import { construireCarte } from '../map/carte.js';
 import { EMPIRES, EMPIRES_PAR_ID, DOCTRINE_DEFAUT, RESSOURCES } from '../data/empires.js';
+import { CULTURES_PROVINCES } from '../data/monde.js';
 
 export const DATE_DEPART = { jour: 1, mois: 3, annee: 1805 };
 
@@ -151,7 +152,10 @@ export function creerPartie(idEmpireJoueur, options = {}) {
     territoire.chantier = null;
     territoire.levee = null;
     territoire.occupationEnCours = null;
-    territoire.insurrection = 0;
+    // Attachement national, figé au 1er mars 1805 : il ne suit pas les conquêtes.
+    territoire.culture = CULTURES_PROVINCES[id] ?? territoire.maitre;
+    territoire.revolte = 0;
+    territoire.regimeRevolte = 'noyau';
     // Moral de la population : 0 à 100. Le moral des troupes viendra en phase 3.
     territoire.moral = 55;
     if (!empires[territoire.maitre]) {

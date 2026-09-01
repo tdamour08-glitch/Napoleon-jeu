@@ -12,6 +12,7 @@
 import { RESSOURCES } from '../data/empires.js';
 import { controleur, estOccupe, recenserTerritoires, alerter, journaliser } from './etat.js';
 import { entretienMilitaire, regenererReserves, calculerReservesMax, estPort } from './armees.js';
+import { malusRevolte } from './revolte.js';
 import {
   effetsPolitiques,
   coutPolitiques,
@@ -75,6 +76,8 @@ export function productionTerritoire(territoire, empire = null) {
   if (estOccupe(territoire)) facteur *= RENDEMENT_OCCUPATION;
   // Une population démoralisée travaille mal : de 0,7 à 1,15.
   facteur *= 0.7 + (territoire.moral / 100) * 0.45;
+  // Et une province qui gronde travaille moins encore.
+  facteur *= malusRevolte(territoire);
 
   const sortie = {};
   for (const r of RESSOURCES) {
@@ -257,6 +260,8 @@ function faireEvoluerMoral(etat, territoire) {
   if (empire.penuries.eau) cible -= 20;
   if (empire.penuries.bois) cible -= 10;
   if (empire.penuries.or) cible -= 8;
+  // Une province qui ne se reconnaît pas dans son drapeau boude.
+  cible -= (territoire.revolte ?? 0) * 0.12;
   cible = Math.max(0, Math.min(100, cible));
 
   const ecart = cible - territoire.moral;

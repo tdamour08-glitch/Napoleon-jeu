@@ -16,7 +16,7 @@ export const VERSION = 3;
 /** Champs d'une province qui évoluent en cours de partie. */
 const CHAMPS_TERRITOIRE = [
   'maitre', 'occupant', 'developpement', 'chantier', 'levee', 'moral',
-  'population', 'occupationEnCours', 'insurrection',
+  'population', 'occupationEnCours', 'revolte', 'regimeRevolte', 'culture',
 ];
 
 /** Champs d'un empire qui évoluent en cours de partie. */

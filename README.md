@@ -73,6 +73,7 @@ js/core/ia_militaire.js conduite des armées non jouées
 js/core/ia_strategie.js décisions des cabinets : alliances, guerres, paix
 js/core/traites.js    traités, annexion, reddition, élimination, victoire
 js/core/politiques.js choix sociaux, impôt, dette, croissance de la population
+js/core/revolte.js    cultures, noyau national, jauge de révolte, revendications
 js/core/sauvegarde.js enregistrement, reprise, export et import de partie
 outils/frontieres.py  fabrique js/data/frontieres.js depuis Natural Earth
 js/ui/traite.js       table des négociations
@@ -310,6 +311,43 @@ Le menu propose trois réglages, sous **Règles de la partie**&nbsp;:
 - **Forces égales** — chaque grande puissance débute avec le même effectif total.
 - **Ardeur des cabinets rivaux** — prudente, normale ou implacable : à quelle fréquence
   les puissances non jouées déclarent la guerre.
+
+### Le noyau, la révolte et la centralisation
+
+Chaque province porte une **culture**, fixée en 1805, qui ne suit pas les conquêtes.
+Celles dont la culture est celle de leur souverain forment son **noyau** : elles ne
+bougent jamais. Le reste porte une **jauge de révolte**, et deux situations bien
+distinctes s'y présentent :
+
+- une province **occupée**, que nul traité n'a cédée, voit sa jauge monter jusqu'à
+  chasser la garnison — un corps sur place ou à une province de là la fait redescendre ;
+- une province **annexée mais de culture étrangère** ne fait jamais sécession. Sa jauge
+  plafonne, et ce plafond mesure un ressentiment qui donne à l'étranger un **motif de
+  guerre** : au-delà de 45, la puissance qui s'en réclame la traite comme sienne et
+  l'inscrit dans ses objectifs.
+
+Le plafond dépend de la **centralisation** de celui qui tient la province :
+
+| Puissance | Centralisation | Ce que cela traduit |
+|---|---|---|
+| France | 1,35 | préfets, Code civil, une seule loi |
+| Prusse | 1,15 | une administration militaire et courte |
+| Russie | 1,05 | l'autocratie, mais des distances immenses |
+| Espagne | 0,95 | les Bourbons ont unifié ; les vice-royautés restent lointaines |
+| Autriche | 0,78 | une mosaïque de nations, Bohême et Hongrie exceptées |
+| Royaume-Uni | 0,75 | trois royaumes et un empire |
+| Empire ottoman | 0,75 | millets et pachaliks : la Porte règne plus qu'elle n'administre |
+
+Quelques cultures ne se reconnaissent dans aucun drapeau de 1805 — irlandaise,
+italienne, hongroise, créole — et ne produisent donc que du ressentiment. D'autres ont
+un État pour les porter, et c'est là que naissent les guerres : le **Canada est de
+culture française** sous drapeau britannique, la **Silésie autrichienne** sous drapeau
+prussien, la **Galicie polonaise** sous drapeau autrichien.
+
+Mesuré sur cinq parties de vingt-cinq ans, le pic de possession européenne passe à
+33,4 % pour la France — de loin le premier —, 27,6 % pour la Russie, 22,8 % pour la
+Prusse, 17,9 % pour le Royaume-Uni et 17,2 % pour l'Autriche. La centralisation est
+devenue l'atout structurant de la partie française.
 
 ### Les subsides
 

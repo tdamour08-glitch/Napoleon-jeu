@@ -20,6 +20,13 @@ import { UNITES, TAILLE_REGIMENT, decrireComposition } from '../data/unites.js';
 import { couleurMotivation } from '../render/rendu.js';
 import { partEuropeenne } from '../core/traites.js';
 import {
+  cultureDe,
+  estNoyau,
+  pretendantCulturel,
+  regimeRevolte,
+  SEUIL_REVENDICATION,
+} from '../core/revolte.js';
+import {
   POLITIQUES,
   POLITIQUES_PAR_ID,
   effetsPolitiques,
@@ -321,6 +328,7 @@ export class Interface {
       Math.round(t.moral),
       t.chantier ? t.chantier.restant : 'x',
       t.levee ? t.levee.restant : 'x',
+      Math.round(t.revolte ?? 0),
       controleur(t),
       t.occupant ?? '-',
       this.etat.selectionArmee ?? '-',
@@ -388,6 +396,8 @@ export class Interface {
         <div class="jauge-moral"><i style="width:${t.moral}%;background:${couleurMoral(t.moral)}"></i></div>
       </div>
 
+      ${this.blocRevolte(t, tenu)}
+
       <div class="bloc">
         <h3>Bilan quotidien</h3>
         <div class="gisements">${gisements}</div>
@@ -403,6 +413,48 @@ export class Interface {
         <div class="liste-voisins">${voisins}</div>
       </div>`;
 
+  }
+
+  /** Attachement national de la province, et ce qu'il en coûte. */
+  blocRevolte(t, tenu) {
+    const etat = this.etat;
+    const regime = regimeRevolte(etat, t);
+    const revolte = t.revolte ?? 0;
+    const noyau = estNoyau(etat, t, tenu.id);
+    const pretendant = pretendantCulturel(etat, t);
+
+    const explication = {
+      noyau: `Province ${noyau ? 'du noyau national' : 'apaisée'} : rien à craindre de l'intérieur.`,
+      occupation:
+        'Occupée sans traité. Sans garnison à portée, la jauge monte jusqu\'au soulèvement, ' +
+        'et la province revient à son souverain.',
+      annexion:
+        'Annexée, mais de culture étrangère. Elle ne fera pas sécession — ' +
+        (pretendant
+          ? `en revanche ${avecArticleEmpire(etat.empires[pretendant])} s'en réclame.`
+          : 'en revanche elle donne à l\'étranger un prétexte.'),
+    }[regime.type];
+
+    const nomCulture = NOMS_CULTURES[cultureDe(t)] ?? etat.empires[cultureDe(t)]?.nom ?? cultureDe(t);
+
+    return `
+      <div class="bloc">
+        <h3>Attachement</h3>
+        <div class="paire"><span>Culture</span><span>${nomCulture}</span></div>
+        <div class="paire">
+          <span>Révolte</span>
+          <span>${Math.round(revolte)} / 100${regime.type === 'annexion' ? ` (plafond ${Math.round(regime.plafond)})` : ''}</span>
+        </div>
+        <div class="jauge-moral">
+          <i style="width:${revolte}%;background:${couleurRevolte(revolte)}"></i>
+        </div>
+        <p class="motif-chantier">${explication}</p>
+        ${
+          revolte >= SEUIL_REVENDICATION && regime.type === 'annexion'
+            ? '<span class="etiquette-guerre">Revendiquée</span>'
+            : ''
+        }
+      </div>`;
   }
 
   /** Bloc « levée » du panneau de province : une arme par bouton. */
@@ -965,6 +1017,24 @@ export class Interface {
       </div>`;
   }
 
+}
+
+/** Noms lisibles des cultures qui n'ont pas d'État pour les porter. */
+const NOMS_CULTURES = {
+  irl: 'irlandaise', eco: 'écossaise', nee: 'néerlandaise', all: 'allemande',
+  ita: 'italienne', ill: 'illyrienne', gre: 'grecque', ser: 'serbe', egy: 'égyptienne',
+  amer: 'créole', jav: 'javanaise', aus: 'australienne', boh: 'tchèque', hon: 'hongroise',
+};
+
+function avecArticleEmpire(empire) {
+  return empire ? `${empire.nom}` : 'une puissance';
+}
+
+function couleurRevolte(valeur) {
+  if (valeur >= 70) return '#e0503a';
+  if (valeur >= 45) return '#d98a2b';
+  if (valeur >= 20) return '#c9a227';
+  return '#4c9a5a';
 }
 
 function couleurEstime(valeur) {

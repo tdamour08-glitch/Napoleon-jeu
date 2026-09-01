@@ -16,6 +16,7 @@ import { journaliser, alerter } from './etat.js';
 import { sontEnGuerre, conclureArmistice, ajusterOpinion, ennemis } from './diplomatie.js';
 import { avecArticle, genitif, prepositionDe } from '../data/langue.js';
 import { PROVINCES_EUROPEENNES } from '../data/monde.js';
+import { cultureDe, estNoyau } from './revolte.js';
 
 /** Les puissances qui disputent la partie. */
 export const GRANDES_PUISSANCES = ['fra', 'gbr', 'pru', 'aut', 'rus', 'esp', 'ott'];
@@ -38,6 +39,18 @@ export function valeurProvince(territoire) {
   if (territoire.capitale) valeur *= 2.5;
   if (territoire.colonie) valeur *= 0.6;
   return valeur;
+}
+
+/**
+ * On cède plus volontiers une province qui n'est pas à soi et qui gronde,
+ * surtout à qui s'en réclame par la culture.
+ */
+function remiseCulturelle(etat, territoire, demandeur) {
+  let remise = 0;
+  if (cultureDe(territoire) === demandeur) remise += 0.45;
+  if (!estNoyau(etat, territoire, territoire.maitre)) remise += 0.25;
+  remise += Math.min(0.3, (territoire.revolte ?? 0) / 250);
+  return Math.min(0.8, remise);
 }
 
 /**
@@ -85,7 +98,10 @@ export function lassitude(etat, empire, equilibre = null) {
 /** Coût des conditions, du point de vue de celui qui les subit. */
 export function coutTermes(etat, traite) {
   let cout = 0;
-  for (const id of traite.annexions) cout += valeurProvince(etat.carte.territoires[id]);
+  for (const id of traite.annexions) {
+    const t = etat.carte.territoires[id];
+    cout += valeurProvince(t) * (1 - remiseCulturelle(etat, t, traite.demandeur));
+  }
   // Ne pas récupérer ses propres provinces occupées coûte aussi, mais moins :
   // elles restent siennes en droit.
   const { restituables } = provincesNegociables(etat, traite.demandeur, traite.cible);
@@ -185,7 +201,8 @@ export function appliquerTraite(etat, traite) {
     t.maitre = demandeur;
     t.occupant = null;
     t.occupationEnCours = null;
-    t.insurrection = 0;
+    // Une annexion apaise l'occupation mais laisse le ressentiment national.
+    t.revolte = Math.min(60, t.revolte ?? 0);
     t.chantier = null;
     t.levee = null;
     // Une population annexée ne se réjouit pas de son nouveau maître.

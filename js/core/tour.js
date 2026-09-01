@@ -12,6 +12,7 @@ import { appliquerJourCombat } from './combat.js';
 import { conduireArmeesBots } from './ia_militaire.js';
 import { conduireDiplomatieBots, suivreGuerres, expirerOffres } from './ia_strategie.js';
 import { verifierRedditions, verifierEliminations, verifierVictoire } from './traites.js';
+import { avancerRevolte, signalerRevoltes } from './revolte.js';
 
 export function jouerUnJour(etat) {
   // Une partie terminée ne se poursuit pas.
@@ -27,14 +28,18 @@ export function jouerUnJour(etat) {
   // 3. Batailles, déroutes, occupations.
   appliquerJourCombat(etat);
 
-  // 4. Décisions des puissances non jouées : cabinet, puis état-major.
+  // 4. Ce que les peuples en pensent : jauges de révolte et soulèvements.
+  for (const id of etat.carte.ordre) avancerRevolte(etat, etat.carte.territoires[id]);
+  signalerRevoltes(etat);
+
+  // 5. Décisions des puissances non jouées : cabinet, puis état-major.
   suivreGuerres(etat);
   expirerOffres(etat);
   conduireDiplomatieBots(etat);
   gererEconomieBots(etat);
   conduireArmeesBots(etat);
 
-  // 5. Capitulations, disparitions, et fin de partie.
+  // 6. Capitulations, disparitions, et fin de partie.
   verifierRedditions(etat);
   if (etat.economieARecalculer) {
     recalculerEconomie(etat);
