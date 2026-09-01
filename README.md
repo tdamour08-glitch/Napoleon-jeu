@@ -51,7 +51,7 @@ demandent un abonnement GitHub Pro ou Team). Une fois le dépôt public :
 2. *Source* : **Deploy from a branch** ;
 3. *Branch* : `claude/napoleonic-strategy-game-1exbzx`, dossier `/ (root)` → **Save** ;
 4. une minute plus tard, le jeu est à
-   `https://tdamour08-glitch.github.io/Claude-code-test/`.
+   `https://tdamour08-glitch.github.io/Napoleon-jeu/`.
 
 Les sauvegardes passent par le `localStorage` du navigateur : elles restent sur la
 machine du joueur, et l'export de partie en fichier fonctionne aussi bien en ligne
