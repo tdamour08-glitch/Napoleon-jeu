@@ -21,7 +21,9 @@
 
 param(
     [int]    $Port   = 8000,
-    [switch] $Reseau
+    [switch] $Reseau,
+    # servir.bat ouvre lui-meme le navigateur, une fois le port a l'ecoute.
+    [switch] $SansNavigateur
 )
 
 $ErrorActionPreference = 'Stop'
@@ -82,7 +84,7 @@ if ($Reseau) {
 Write-Host '  Ctrl+C pour arreter.'
 Write-Host ''
 
-Start-Process "http://localhost:$Port/"
+if (-not $SansNavigateur) { Start-Process "http://localhost:$Port/" }
 
 while ($ecouteur.IsListening) {
     try {
