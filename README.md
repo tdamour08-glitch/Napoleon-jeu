@@ -19,6 +19,12 @@ Double-cliquez **`servir.bat`** à la racine du dépôt. Il cherche dans l'ordre
 Node, puis PowerShell — qui est livré avec Windows —, démarre un serveur sur le port
 8000 et ouvre le navigateur. Fermer la fenêtre arrête le serveur.
 
+Le navigateur n'est **pas** ouvert tout de suite : `outils/ouvrir.ps1` sonde le port
+et n'ouvre la page qu'une fois le serveur prêt. Sans cette attente, la page s'affichait
+avant le démarrage du serveur et donnait « Ce site est inaccessible ».
+
+Si le port 8000 est déjà pris, passez-en un autre : `servir.bat 8080`.
+
 Le repli PowerShell est `outils/servir.ps1` : un serveur de fichiers statiques bâti sur
 `HttpListener`, une centaine de lignes, aucune dépendance. Il sert les `.js` en
 `text/javascript` — sans ce type MIME exact, le navigateur refuse les modules ES et

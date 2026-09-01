@@ -2,9 +2,8 @@
 REM ============================================================
 REM  Les Aigles - demarrage du serveur local (Windows)
 REM
-REM  Double-cliquez ce fichier. Il choisit un port libre, demarre
-REM  un serveur sur le dossier du jeu, ATTEND qu'il reponde, puis
-REM  ouvre le navigateur.
+REM  Double-cliquez ce fichier, ou lancez-le avec un port :
+REM      servir.bat 8080
 REM
 REM  Les modules ES imposent un vrai serveur : ouvrir index.html
 REM  directement (file://) ne fonctionne pas.
@@ -12,63 +11,60 @@ REM ============================================================
 setlocal
 cd /d "%~dp0"
 
-REM --- Choix d'un port libre : 8000, sinon 8080, sinon 8090 ---
-set PORT=
-for %%P in (8000 8080 8090) do (
-  if not defined PORT (
-    powershell -NoProfile -Command "exit ([bool]((Get-NetTCPConnection -State Listen -LocalPort %%P -ErrorAction SilentlyContinue)))" >nul 2>nul
-    if errorlevel 1 (echo   Le port %%P est deja utilise.) else (set PORT=%%P)
-  )
-)
-
-if not defined PORT (
-  echo.
-  echo   Les ports 8000, 8080 et 8090 sont tous occupes.
-  echo   Fermez l'application qui les utilise, puis relancez.
-  echo.
-  pause
-  exit /b 1
-)
+set PORT=%1
+if "%PORT%"=="" set PORT=8000
 
 echo.
-echo   Les Aigles - serveur local sur le port %PORT%
+echo   Les Aigles - serveur local
+echo   Dossier  : %CD%
+echo   Adresse  : http://localhost:%PORT%/
+echo.
 echo   Le navigateur s'ouvrira des que le serveur repondra.
 echo   Fermez cette fenetre pour arreter le serveur.
 echo.
 
-REM --- Ouvre le navigateur seulement une fois le port a l'ecoute ---
-REM     Sans cette attente, la page s'ouvrait avant le demarrage du
-REM     serveur et affichait une erreur de connexion.
-start "" /b powershell -NoProfile -Command ^
-  "for ($i=0; $i -lt 80; $i++) { try { $c = New-Object Net.Sockets.TcpClient; $c.Connect('localhost', %PORT%); $c.Close(); Start-Process 'http://localhost:%PORT%/'; break } catch { Start-Sleep -Milliseconds 250 } }"
+REM  Le navigateur est ouvert par un script separe qui attend que le
+REM  port reponde. Sans cette attente, la page s'ouvrait avant le
+REM  demarrage du serveur et affichait "Ce site est inaccessible".
+start "" /b powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0outils\ouvrir.ps1" -Port %PORT%
 
-REM --- 1. Python, s'il est installe (le plus courant) ---
 where py >nul 2>nul
-if %errorlevel%==0 (
+if not errorlevel 1 (
+  echo   Serveur : Python
+  echo.
   py -m http.server %PORT%
   goto :fin
 )
 
 where python >nul 2>nul
-if %errorlevel%==0 (
+if not errorlevel 1 (
+  echo   Serveur : Python
+  echo.
   python -m http.server %PORT%
   goto :fin
 )
 
-REM --- 2. Node, s'il est installe ---
 where npx >nul 2>nul
-if %errorlevel%==0 (
+if not errorlevel 1 (
+  echo   Serveur : Node
+  echo.
   npx --yes serve -l %PORT% .
   goto :fin
 )
 
-REM --- 3. Sinon PowerShell, livre avec Windows ---
-echo   Ni Python ni Node trouves : on passe par PowerShell.
+echo   Serveur : PowerShell (ni Python ni Node trouves)
 echo.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0outils\servir.ps1" -Port %PORT% -SansNavigateur
 
 :fin
 echo.
-echo   Serveur arrete.
+echo   ------------------------------------------------------------
+echo   Le serveur s'est arrete.
+echo   Si un message d'erreur apparait ci-dessus, notez-le : c'est
+echo   lui qui dit ce qui n'a pas fonctionne.
+echo   Si le port %PORT% etait deja pris, relancez avec un autre :
+echo       servir.bat 8080
+echo   ------------------------------------------------------------
+echo.
 pause
 endlocal
