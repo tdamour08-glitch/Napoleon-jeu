@@ -1,0 +1,47 @@
+# Publie le jeu sur GitHub Pages à chaque poussée.
+#
+# Le jeu est entièrement statique : il n'y a rien à compiler, on
+# téléverse le dépôt tel quel. « configure-pages » avec enablement
+# active Pages tout seul si ce n'est pas déjà fait, ce qui évite
+# d'aller le régler à la main dans les paramètres.
+
+name: Publier sur GitHub Pages
+
+on:
+  push:
+    branches: [claude/napoleonic-strategy-game-1exbzx]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Une publication à la fois, sans annuler celle qui est en cours.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Préparer Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Téléverser le site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Déployer
+        id: deploiement
+        uses: actions/deploy-pages@v4
