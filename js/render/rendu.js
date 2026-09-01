@@ -8,8 +8,9 @@ import { controleur } from '../core/etat.js';
 const COULEUR_MER = '#16283f';
 const COULEUR_MER_PROFONDE = '#101d2f';
 const COULEUR_TERRE_NEUTRE = '#3b4152';
-const COULEUR_FRONTIERE = 'rgba(10, 14, 22, 0.55)';
-const COULEUR_COTE = 'rgba(200, 220, 255, 0.18)';
+const COULEUR_FRONTIERE = 'rgba(10, 14, 22, 0.5)';
+/** Halo clair le long des côtes, qui détache les terres de la mer. */
+const COULEUR_RIVAGE = 'rgba(150, 190, 235, 0.28)';
 
 /** Les pions se dessinent au-dessus du centre pour ne pas masquer le nom. */
 export const DECALAGE_PION = -13;
@@ -51,45 +52,41 @@ export class Rendu {
     this.dessinerMer(ctx, cam);
 
     const fenetre = cam.fenetreVisible();
-
-    // 1. Silhouette des continents : sert de fond et bouche les micro-jointures.
-    ctx.lineJoin = 'round';
-    for (const continent of etat.carte.continents) {
-      this.tracerPolygone(ctx, continent.contour);
-      ctx.fillStyle = COULEUR_TERRE_NEUTRE;
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = COULEUR_TERRE_NEUTRE;
-      ctx.stroke();
-    }
-
-    // 2. Territoires.
     const visibles = [];
     for (const id of etat.carte.ordre) {
       const territoire = etat.carte.territoires[id];
-      if (!this.estVisible(territoire.bornes, fenetre)) continue;
-      visibles.push(territoire);
-      const empire = etat.empires[controleur(territoire)];
-      this.tracerPolygone(ctx, territoire.polygone);
-      ctx.fillStyle = this.couleurTerritoire(empire, territoire, etat);
-      ctx.fill();
+      if (this.estVisible(territoire.bornes, fenetre)) visibles.push(territoire);
     }
 
-    // 3. Frontières.
-    ctx.lineWidth = Math.max(0.6, Math.min(1.6, 0.9 * cam.zoom));
-    ctx.strokeStyle = COULEUR_FRONTIERE;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    // 1. Halo de rivage : un trait large sous les terres, qui déborde en mer
+    //    et donne aux côtes un liseré clair.
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = COULEUR_RIVAGE;
+    for (const territoire of visibles) this.tracerAnneaux(ctx, territoire, true);
+
+    // 2. Fond de terre. Les contours sont tracés province par province : un
+    //    trait de la même couleur que le fond bouche les jointures d'un pixel
+    //    que le lissage laisse entre deux voisines.
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = COULEUR_TERRE_NEUTRE;
+    ctx.fillStyle = COULEUR_TERRE_NEUTRE;
+    for (const territoire of visibles) this.tracerAnneaux(ctx, territoire, true, true);
+
+    // 3. Couleur du souverain.
     for (const territoire of visibles) {
-      this.tracerPolygone(ctx, territoire.polygone);
-      ctx.stroke();
+      const empire = etat.empires[controleur(territoire)];
+      ctx.fillStyle = this.couleurTerritoire(empire, territoire, etat);
+      ctx.strokeStyle = ctx.fillStyle;
+      this.tracerAnneaux(ctx, territoire, true, true);
     }
 
-    // 4. Traits de côte.
-    ctx.lineWidth = 1.2;
-    ctx.strokeStyle = COULEUR_COTE;
-    for (const continent of etat.carte.continents) {
-      this.tracerPolygone(ctx, continent.contour);
-      ctx.stroke();
-    }
+    // 4. Frontières.
+    ctx.lineWidth = Math.max(0.5, Math.min(1.4, 0.8 * cam.zoom));
+    ctx.strokeStyle = COULEUR_FRONTIERE;
+    for (const territoire of visibles) this.tracerAnneaux(ctx, territoire, true);
 
     // 5. Survol et sélection.
     if (etat.survol && etat.survol !== etat.selection) {
@@ -303,10 +300,22 @@ export class Rendu {
 
   souligner(ctx, territoire, couleur, epaisseur) {
     if (!territoire) return;
-    this.tracerPolygone(ctx, territoire.polygone);
     ctx.lineWidth = epaisseur;
     ctx.strokeStyle = couleur;
-    ctx.stroke();
+    this.tracerAnneaux(ctx, territoire, true);
+  }
+
+  /**
+   * Trace les anneaux d'une province.
+   * @param {boolean} contour applique le trait courant
+   * @param {boolean} remplir applique le remplissage courant
+   */
+  tracerAnneaux(ctx, territoire, contour = false, remplir = false) {
+    for (const anneau of territoire.anneaux) {
+      this.tracerPolygone(ctx, anneau);
+      if (remplir) ctx.fill();
+      if (contour) ctx.stroke();
+    }
   }
 
   tracerPolygone(ctx, poly) {
@@ -344,7 +353,9 @@ export class Rendu {
       const t = etat.carte.territoires[id];
       const b = t.bornes;
       if (mx < b[0] || mx > b[2] || my < b[1] || my > b[3]) continue;
-      if (dansPolygone(mx, my, t.polygone)) return id;
+      for (const anneau of t.anneaux) {
+        if (dansPolygone(mx, my, anneau)) return id;
+      }
     }
     return null;
   }

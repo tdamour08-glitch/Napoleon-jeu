@@ -6,8 +6,8 @@ import { EMPIRES_JOUABLES } from '../data/empires.js';
 import { TERRITOIRES } from '../data/monde.js';
 
 /**
- * Affiche le menu et résout la promesse avec l'identifiant choisi.
- * @returns {Promise<string>}
+ * Affiche le menu et résout la promesse avec l'empire choisi et les règles.
+ * @returns {Promise<{empire: string, options: object}>}
  */
 export function choisirEmpire() {
   const liste = document.getElementById('liste-empires');
@@ -36,7 +36,15 @@ export function choisirEmpire() {
 
   return new Promise((resoudre) => {
     bouton.addEventListener('click', () => {
-      if (choix) resoudre(choix);
+      if (!choix) return;
+      resoudre({
+        empire: choix,
+        options: {
+          doctrinesEgales: document.getElementById('opt-doctrines').checked,
+          forcesEgales: document.getElementById('opt-forces').checked,
+          agressivite: document.getElementById('opt-agressivite').value,
+        },
+      });
     });
   });
 }

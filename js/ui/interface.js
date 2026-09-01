@@ -22,6 +22,15 @@ import {
 } from '../core/armees.js';
 import { couleurMotivation } from '../render/rendu.js';
 import { partEuropeenne } from '../core/traites.js';
+import {
+  POLITIQUES,
+  effetsPolitiques,
+  coutPolitiques,
+  moralImpot,
+  plafondEmprunt,
+  IMPOT_MIN,
+  IMPOT_MAX,
+} from '../core/politiques.js';
 import { decrireTermes } from './traite.js';
 import {
   coutDeveloppement,
@@ -153,9 +162,29 @@ export class Interface {
         this.basculerEconomie();
       } else if (cible.dataset.action === 'echanger') {
         this.actions.echanger(cible.dataset.ressource, cible.dataset.sens);
-        this.signatureEconomie = null;
-        this.rafraichirEconomie();
+        this.rafraichirEconomieMaintenant();
+      } else if (cible.dataset.action === 'rembourser') {
+        this.actions.rembourser(100);
+        this.rafraichirEconomieMaintenant();
       }
+    });
+
+    this.el.panneauEconomie.addEventListener('change', (ev) => {
+      const cible = ev.target.closest('[data-action]');
+      if (!cible) return;
+      if (cible.dataset.action === 'politique') {
+        this.actions.basculerPolitique(cible.dataset.politique);
+        this.rafraichirEconomieMaintenant();
+      }
+    });
+
+    // Le curseur d'impôt réagit pendant qu'on le déplace.
+    this.el.panneauEconomie.addEventListener('input', (ev) => {
+      const cible = ev.target.closest('[data-action="impot"]');
+      if (!cible) return;
+      this.actions.definirImpot(Number(cible.value) / 100);
+      const montant = this.el.panneauEconomie.querySelector('.reglage-impot .montant');
+      if (montant) montant.textContent = `${cible.value} %`;
     });
   }
 
@@ -349,7 +378,7 @@ export class Interface {
       <div class="bloc">
         <h3>Province</h3>
         <div class="paire"><span>Terrain</span><span>${TERRAINS[t.terrain]?.nom ?? t.terrain}</span></div>
-        <div class="paire"><span>Population</span><span>${'●'.repeat(t.population)}${'○'.repeat(3 - t.population)}</span></div>
+        <div class="paire"><span>Population</span><span>${t.population.toFixed(1)} M</span></div>
         <div class="paire"><span>Développement</span><span>${t.developpement} / ${DEVELOPPEMENT_MAX}</span></div>
         ${t.capitale ? '<div class="paire"><span>Statut</span><span>Capitale</span></div>' : ''}
         ${t.colonie ? '<div class="paire"><span>Statut</span><span>Colonie</span></div>' : ''}
@@ -715,11 +744,20 @@ export class Interface {
     this.basculerLateral('diplomatie');
   }
 
+  /** Force la reconstruction du panneau après une action du joueur. */
+  rafraichirEconomieMaintenant() {
+    this.signatureEconomie = null;
+    this.rafraichirEconomie();
+  }
+
   rafraichirEconomie() {
     const empire = this.etat.empires[this.etat.joueur];
-    const signature = RESSOURCES.map(
-      (r) => `${Math.floor(empire.stocks[r.id])}:${empire.net[r.id].toFixed(1)}`,
-    ).join('|');
+    const signature = [
+      RESSOURCES.map((r) => `${Math.floor(empire.stocks[r.id])}:${empire.net[r.id].toFixed(1)}`).join('|'),
+      empire.tauxImposition.toFixed(2),
+      Math.round(empire.dette),
+      empire.politiques.join(','),
+    ].join('#');
     if (signature === this.signatureEconomie) return;
     this.signatureEconomie = signature;
 
@@ -744,13 +782,9 @@ export class Interface {
           <div class="marche-ligne">
             <span class="etiquette"><span class="pastille" style="background:${r.couleur}"></span>${r.nom}</span>
             <button class="bouton-marche" data-action="echanger" data-ressource="${r.id}" data-sens="achat"
-                    ${peutAcheter ? '' : 'disabled'} title="Acheter ${LOT_MARCHE} ${r.nom.toLowerCase()}">
-              acheter ${prix.achat.toFixed(0)} or
-            </button>
+                    ${peutAcheter ? '' : 'disabled'}>acheter ${prix.achat.toFixed(0)} or</button>
             <button class="bouton-marche" data-action="echanger" data-ressource="${r.id}" data-sens="vente"
-                    ${peutVendre ? '' : 'disabled'} title="Vendre ${LOT_MARCHE} ${r.nom.toLowerCase()}">
-              vendre ${prix.vente.toFixed(0)} or
-            </button>
+                    ${peutVendre ? '' : 'disabled'}>vendre ${prix.vente.toFixed(0)} or</button>
           </div>`;
       })
       .join('');
@@ -768,6 +802,9 @@ export class Interface {
         <tbody>${lignes}</tbody>
       </table>
 
+      ${this.blocBudget(empire)}
+      ${this.blocPolitiques(empire)}
+
       <div class="bloc">
         <h3>Marché · lots de ${LOT_MARCHE}</h3>
         <div class="marche-lignes">${marche}</div>
@@ -776,8 +813,91 @@ export class Interface {
       <div class="bloc">
         <div class="paire"><span>Capacité des entrepôts</span><span>${empire.capacite}</span></div>
       </div>`;
-
   }
+
+  /** Recettes, dépenses, impôt et dette : le budget de l'État, compté en or. */
+  blocBudget(empire) {
+    const b = empire.budget;
+    const recettes = b.impots + b.ressources;
+    const depenses = b.administration + b.armee + b.politiques + b.interets;
+    const solde = recettes - depenses;
+    const plafond = plafondEmprunt(empire);
+    const lourde = empire.dette > plafond * 0.6;
+    const effetMoral = moralImpot(empire.tauxImposition);
+
+    return `
+      <div class="bloc">
+        <h3>Budget · par jour</h3>
+        <div class="budget-lignes">
+          <div class="budget-ligne recette"><span>Impôt</span><span>+${b.impots.toFixed(1)}</span></div>
+          <div class="budget-ligne recette"><span>Mines et commerce</span><span>+${b.ressources.toFixed(1)}</span></div>
+          <div class="budget-ligne depense"><span>Administration</span><span>−${b.administration.toFixed(1)}</span></div>
+          <div class="budget-ligne depense"><span>Solde des armées</span><span>−${b.armee.toFixed(1)}</span></div>
+          <div class="budget-ligne depense"><span>Politiques</span><span>−${b.politiques.toFixed(1)}</span></div>
+          <div class="budget-ligne depense"><span>Intérêts de la dette</span><span>−${b.interets.toFixed(2)}</span></div>
+          <div class="budget-ligne total">
+            <span>Solde</span>
+            <span style="color:${solde >= 0 ? 'var(--vert)' : '#e07b6a'}">${nombre(solde)}</span>
+          </div>
+        </div>
+
+        <h3 style="margin-top:14px">Impôt</h3>
+        <div class="reglage-impot">
+          <input type="range" data-action="impot" min="${IMPOT_MIN * 100}" max="${IMPOT_MAX * 100}" step="5"
+                 value="${Math.round(empire.tauxImposition * 100)}">
+          <span class="montant">${Math.round(empire.tauxImposition * 100)} %</span>
+        </div>
+        <p class="effet-impot">
+          ${effetMoral >= 0
+            ? `Pression allégée : +${effetMoral.toFixed(0)} de moral dans les provinces.`
+            : `Pression accrue : ${effetMoral.toFixed(0)} de moral dans les provinces.`}
+        </p>
+
+        <h3 style="margin-top:14px">Dette</h3>
+        <div class="dette-ligne">
+          <span class="montant ${lourde ? 'lourde' : ''}">${Math.round(empire.dette)} / ${Math.round(plafond)} or</span>
+          <button class="bouton-mini" data-action="rembourser"
+                  ${empire.dette > 0 && empire.stocks.or >= 20 ? '' : 'disabled'}>Rembourser 100</button>
+        </div>
+      </div>`;
+  }
+
+  /** Les grandes politiques du règne. */
+  blocPolitiques(empire) {
+    const cout = coutPolitiques(this.etat, empire);
+    const effets = effetsPolitiques(empire);
+    const lignes = POLITIQUES.map((politique) => {
+      const active = empire.politiques.includes(politique.id);
+      const prix = Object.entries(politique.cout)
+        .map(([r, taux]) => {
+          const res = RESSOURCES.find((x) => x.id === r);
+          const montant = active ? (cout[r] ?? 0).toFixed(1) : `${taux} / sujet`;
+          return `<span style="color:${res.couleur}">${res.nom} ${montant}</span>`;
+        })
+        .join(' · ');
+      return `
+        <label class="politique ${active ? 'active' : ''}">
+          <input type="checkbox" data-action="politique" data-politique="${politique.id}" ${active ? 'checked' : ''}>
+          <span>
+            <span class="titre">${politique.nom}</span>
+            <span class="detail">${politique.resume}</span>
+            <span class="prix">${prix}</span>
+          </span>
+        </label>`;
+    }).join('');
+
+    return `
+      <div class="bloc">
+        <h3>Choix sociaux</h3>
+        <div class="liste-politiques">${lignes}</div>
+        <p class="effet-impot">
+          Plafond de population ${effets.plafond >= 0 ? '+' : ''}${effets.plafond.toFixed(1)} ·
+          croissance ${effets.croissance >= 0 ? '+' : ''}${Math.round(effets.croissance * 100)} % ·
+          moral ${effets.moral >= 0 ? '+' : ''}${effets.moral}
+        </p>
+      </div>`;
+  }
+
 }
 
 function couleurEstime(valeur) {

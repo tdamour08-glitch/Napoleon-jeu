@@ -14,6 +14,7 @@ import {
 import { repondreAlliance } from './core/ia_strategie.js';
 import { appliquerTraite, evaluerTraite, partEuropeenne, GRANDES_PUISSANCES } from './core/traites.js';
 import { TableDesNegociations } from './ui/traite.js';
+import { basculerPolitique, rembourser, IMPOT_MIN, IMPOT_MAX } from './core/politiques.js';
 import { Moteur } from './core/moteur.js';
 import { Camera } from './render/camera.js';
 import { Rendu } from './render/rendu.js';
@@ -22,12 +23,12 @@ import { Interface } from './ui/interface.js';
 import { Guide } from './ui/guide.js';
 
 async function demarrer() {
-  const idEmpire = await choisirEmpire();
+  const { empire: idEmpire, options } = await choisirEmpire();
 
   document.getElementById('ecran-menu').classList.add('cache');
   document.getElementById('ecran-jeu').classList.remove('cache');
 
-  const etat = creerPartie(idEmpire);
+  const etat = creerPartie(idEmpire, options);
   recalculerEconomie(etat);
   initialiserReserves(etat);
 
@@ -94,6 +95,18 @@ async function demarrer() {
       appliquerTraite(etat, offre.traite);
       recalculerEconomie(etat);
       ui.annoncerReponse('Le traité est signé.', true);
+    },
+    definirImpot: (taux) => {
+      const empire = etat.empires[etat.joueur];
+      empire.tauxImposition = Math.max(IMPOT_MIN, Math.min(IMPOT_MAX, taux));
+      recalculerEconomie(etat);
+    },
+    basculerPolitique: (idPolitique) => {
+      basculerPolitique(etat, etat.empires[etat.joueur], idPolitique);
+      recalculerEconomie(etat);
+    },
+    rembourser: (montant) => {
+      rembourser(etat.empires[etat.joueur], montant);
     },
     centrerSurEmpire: (idEmpire) => {
       const empire = etat.empires[idEmpire];

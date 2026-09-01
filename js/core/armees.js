@@ -13,6 +13,7 @@
 
 import { controleur, journaliser } from './etat.js';
 import { avecArticle } from '../data/langue.js';
+import { effetsPolitiques } from './politiques.js';
 
 /** Effectif d'un corps nouvellement levé, en milliers d'hommes. */
 export const TAILLE_CORPS = 10;
@@ -358,7 +359,7 @@ export function regenererReserves(etat) {
       if (t.occupant && t.occupant !== t.maitre) continue; // un pays occupé ne fournit pas de recrues
       apport += t.population * 0.05 * (0.5 + t.moral / 200);
     }
-    apport *= empire.doctrine.reserves ?? 1;
+    apport *= (empire.doctrine.reserves ?? 1) * (1 + effetsPolitiques(empire).reserves);
     empire.reserves = Math.min(empire.reservesMax, empire.reserves + apport);
   }
 }
@@ -371,7 +372,7 @@ export function calculerReservesMax(etat, empire) {
     if (t.occupant && t.occupant !== t.maitre) continue; // un pays occupé ne fournit pas de recrues
     population += t.population;
   }
-  return Math.round(population * 4 * (empire.doctrine.reserves ?? 1));
+  return Math.round(population * 4 * (empire.doctrine.reserves ?? 1) * (1 + effetsPolitiques(empire).reserves));
 }
 
 /** Un jour d'armée : levées, marches, motivation, dissolutions. */

@@ -12,6 +12,14 @@
 import { RESSOURCES } from '../data/empires.js';
 import { controleur, estOccupe, recenserTerritoires, alerter, journaliser } from './etat.js';
 import { entretienMilitaire, regenererReserves, calculerReservesMax } from './armees.js';
+import {
+  effetsPolitiques,
+  coutPolitiques,
+  moralImpot,
+  servirLaDette,
+  emprunter,
+  faireEvoluerPopulation,
+} from './politiques.js';
 
 /** Rendement d'un gisement selon le terrain : certains sols donnent plus. */
 const AFFINITES_TERRAIN = {
@@ -52,7 +60,7 @@ export function dureeDeveloppement(niveau) {
    ------------------------------------------------------------ */
 
 /** Ce qu'une province rapporte par jour. */
-export function productionTerritoire(territoire) {
+export function productionTerritoire(territoire, empire = null) {
   const affinites = AFFINITES_TERRAIN[territoire.terrain] ?? AFFINITES_TERRAIN.plaine;
   let facteur = (0.35 + 0.2 * territoire.population) * (1 + 0.35 * territoire.developpement);
   if (territoire.colonie) facteur *= RENDEMENT_COLONIE;
@@ -65,7 +73,12 @@ export function productionTerritoire(territoire) {
     sortie[r.id] = territoire.gisements[r.id] * affinites[r.id] * facteur;
   }
   // L'impôt : un État vit d'abord de ses sujets, pas seulement de ses mines.
-  sortie.or += 0.3 * territoire.population * (1 + 0.2 * territoire.developpement) * facteurLoyaute(territoire);
+  const taux = empire ? empire.tauxImposition : 1;
+  const remise = empire ? effetsPolitiques(empire).impot : 0;
+  sortie.impots =
+    0.3 * territoire.population * (1 + 0.2 * territoire.developpement) *
+    facteurLoyaute(territoire) * (taux + remise);
+  sortie.or += sortie.impots;
   return sortie;
 }
 
@@ -104,23 +117,38 @@ export function recalculerEconomie(etat) {
     }
   }
 
+  for (const empire of Object.values(etat.empires)) {
+    empire.budget = { impots: 0, ressources: 0, administration: 0, armee: 0, politiques: 0, interets: 0 };
+  }
+
   for (const id of etat.carte.ordre) {
     const territoire = etat.carte.territoires[id];
     const empire = etat.empires[controleur(territoire)];
     if (!empire) continue;
-    const production = productionTerritoire(territoire);
+    const production = productionTerritoire(territoire, empire);
     const consommation = consommationTerritoire(territoire);
     for (const r of RESSOURCES) {
       empire.production[r.id] += production[r.id];
       empire.consommation[r.id] += consommation[r.id];
     }
+    empire.budget.impots += production.impots;
+    empire.budget.ressources += production.or - production.impots;
+    empire.budget.administration += consommation.or;
   }
 
-  // Entretien des armées : le premier poste de dépense d'un empire en guerre.
+  // Entretien des armées et des politiques : les deux grands postes de dépense.
   for (const empire of Object.values(etat.empires)) {
     if (!empire.vivant) continue;
     const solde = entretienMilitaire(etat, empire.id);
     for (const r of RESSOURCES) empire.consommation[r.id] += solde[r.id] ?? 0;
+    empire.budget.armee = solde.or ?? 0;
+
+    const social = coutPolitiques(etat, empire);
+    for (const r of RESSOURCES) empire.consommation[r.id] += social[r.id] ?? 0;
+    empire.budget.politiques = social.or ?? 0;
+
+    empire.consommation.or += empire.interets;
+    empire.budget.interets = empire.interets;
     empire.reservesMax = calculerReservesMax(etat, empire);
     empire.reserves = Math.min(empire.reserves, empire.reservesMax);
   }
@@ -154,6 +182,7 @@ export function initialiserReserves(etat) {
    ------------------------------------------------------------ */
 
 export function appliquerJourEconomie(etat) {
+  for (const empire of Object.values(etat.empires)) servirLaDette(empire);
   recalculerEconomie(etat);
   regenererReserves(etat);
 
@@ -162,8 +191,14 @@ export function appliquerJourEconomie(etat) {
 
     for (const r of RESSOURCES) {
       const stock = empire.stocks[r.id] + empire.net[r.id];
-      const manque = stock < 0;
-      empire.penuries[r.id] = manque;
+      if (r.id === 'or' && stock < 0) {
+        // Un État ne fait pas faillite du jour au lendemain : il emprunte.
+        const decouvert = emprunter(etat, empire, -stock);
+        empire.penuries.or = decouvert > 0;
+        empire.stocks.or = 0;
+        continue;
+      }
+      empire.penuries[r.id] = stock < 0;
       empire.stocks[r.id] = Math.max(0, Math.min(empire.capacite, stock));
     }
 
@@ -171,8 +206,10 @@ export function appliquerJourEconomie(etat) {
   }
 
   for (const id of etat.carte.ordre) {
-    avancerChantier(etat, etat.carte.territoires[id]);
-    faireEvoluerMoral(etat, etat.carte.territoires[id]);
+    const territoire = etat.carte.territoires[id];
+    avancerChantier(etat, territoire);
+    faireEvoluerMoral(etat, territoire);
+    faireEvoluerPopulation(etat, territoire);
   }
 }
 
@@ -181,7 +218,8 @@ function faireEvoluerMoral(etat, territoire) {
   const empire = etat.empires[controleur(territoire)];
   if (!empire) return;
 
-  let cible = 55 + 6 * territoire.developpement;
+  const effets = effetsPolitiques(empire);
+  let cible = 55 + 6 * territoire.developpement + effets.moral + moralImpot(empire.tauxImposition);
   if (territoire.colonie) cible -= 8;
   if (estOccupe(territoire)) cible -= 25;
   if (empire.penuries.eau) cible -= 20;
@@ -255,7 +293,7 @@ function avancerChantier(etat, territoire) {
   // Sans or, les ouvriers ne sont pas payés : le chantier s'arrête.
   if (empire?.penuries.or) return;
 
-  chantier.restant -= 1;
+  chantier.restant -= 1 + effetsPolitiques(empire).chantiers;
   if (chantier.restant > 0) return;
 
   territoire.developpement = chantier.niveauVise;

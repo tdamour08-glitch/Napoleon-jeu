@@ -56,10 +56,17 @@ const SEUIL_CONFIANCE = 22;
 
 /** Rapport de forces minimal pour oser attaquer. */
 const AUDACE = 1.3;
-/** En deçà de cette part de notre puissance, un voisin devient une proie. */
-const PROIE = 0.6;
-/** Jours de répit qu'une puissance s'accorde entre deux guerres qu'elle ouvre. */
-const REPIT = 270;
+
+/** L'option « ardeur » du menu module l'agressivité des cabinets rivaux. */
+const ARDEURS = {
+  prudente: { audace: 1.6, proie: 0.45, repit: 400 },
+  normale: { audace: AUDACE, proie: 0.6, repit: 270 },
+  implacable: { audace: 1.05, proie: 0.8, repit: 150 },
+};
+
+function ardeur(etat) {
+  return ARDEURS[etat.options?.agressivite] ?? ARDEURS.normale;
+}
 
 /** Jours de guerre avant qu'une paix de lassitude devienne envisageable. */
 const GUERRE_MINIMALE = 200;
@@ -375,7 +382,8 @@ function proposerAllianceAuJoueur(etat, demandeur, joueur) {
 function chercherGuerre(etat, empire, equilibre) {
   // Une principauté d'une seule province a d'autres soucis que de conquérir.
   if (empire.territoires.length < 2) return false;
-  if (etat.jourEcoule - (etat.dernieresGuerres[empire.id] ?? -REPIT) < REPIT) return false;
+  const regle = ardeur(etat);
+  if (etat.jourEcoule - (etat.dernieresGuerres[empire.id] ?? -regle.repit) < regle.repit) return false;
   const guerresEnCours = ennemis(etat, empire.id).length;
 
   const maPuissance =
@@ -413,9 +421,9 @@ function chercherGuerre(etat, empire, equilibre) {
         empire: autre,
         defense,
         contreHegemon,
-        exigence: contreHegemon ? 0.7 : AUDACE,
+        exigence: contreHegemon ? 0.7 : regle.audace,
         force: maPuissance + renforts,
-        proie: score < monScore * PROIE,
+        proie: score < monScore * regle.proie,
         rancune: opinion(etat, empire.id, autre.id) < SEUIL_HOSTILITE,
         appat: score / (defense + 1),
       };

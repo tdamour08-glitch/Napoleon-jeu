@@ -11,6 +11,17 @@ import { EMPIRES, EMPIRES_PAR_ID, DOCTRINE_DEFAUT, RESSOURCES } from '../data/em
 
 export const DATE_DEPART = { jour: 1, mois: 3, annee: 1805 };
 
+/**
+ * Réglages d'une partie, choisis au menu.
+ * `doctrinesEgales` et `forcesEgales` permettent de jouer à armes strictement
+ * égales : mêmes qualités militaires, mêmes garnisons de départ.
+ */
+export const OPTIONS_PAR_DEFAUT = {
+  doctrinesEgales: false,
+  forcesEgales: false,
+  agressivite: 'normale', // 'prudente' | 'normale' | 'implacable'
+};
+
 const NOMS_MOIS = [
   'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
@@ -47,14 +58,19 @@ const parRessource = (valeur) => Object.fromEntries(RESSOURCES.map((r) => [r.id,
  * Crée l'état d'une nouvelle partie.
  * @param {string} idEmpireJoueur
  */
-export function creerPartie(idEmpireJoueur) {
+export function creerPartie(idEmpireJoueur, options = {}) {
   const carte = construireCarte();
+  const reglages = { ...OPTIONS_PAR_DEFAUT, ...options };
 
   const empires = {};
   for (const modele of EMPIRES) {
     empires[modele.id] = {
       ...modele,
-      doctrine: { ...DOCTRINE_DEFAUT, ...(modele.doctrine ?? {}) },
+      // « Doctrines égales » efface les avantages propres à chaque puissance,
+      // avantage napoléonien compris : les batailles se jouent alors à armes égales.
+      doctrine: reglages.doctrinesEgales
+        ? { ...DOCTRINE_DEFAUT }
+        : { ...DOCTRINE_DEFAUT, ...(modele.doctrine ?? {}) },
       estJoueur: modele.id === idEmpireJoueur,
       vivant: false,
       territoires: [],
@@ -70,6 +86,12 @@ export function creerPartie(idEmpireJoueur) {
       // Provinces possédées en droit, occupation comprise. Distinct de
       // `territoires`, qui ne compte que celles effectivement tenues.
       souverainete: 0,
+      // Gouvernement : taux de l'impôt, politiques décrétées, dette publique.
+      tauxImposition: 1,
+      politiques: [],
+      dette: 0,
+      interets: 0,
+      budget: { impots: 0, ressources: 0, administration: 0, armee: 0, politiques: 0, interets: 0 },
       // Rayée de la carte : plus une seule province de droit.
       eliminee: false,
       moral: (modele.doctrine ?? DOCTRINE_DEFAUT).moralInitial ?? DOCTRINE_DEFAUT.moralInitial,
@@ -113,6 +135,7 @@ export function creerPartie(idEmpireJoueur) {
     armees: {},
     prochainIdArmee: 1,
     batailles: {},
+    options: reglages,
     relations: {},
     opinions: {},
     // Offres en attente de réponse du joueur, et premier jour de chaque guerre.
@@ -134,7 +157,16 @@ export function creerPartie(idEmpireJoueur) {
 
 /** Place les garnisons de départ et ouvre les guerres déjà déclarées. */
 function installerForcesInitiales(etat) {
-  for (const [idEmpire, garnisons] of Object.entries(FORCES_INITIALES)) {
+  // À forces égales, chaque grande puissance reçoit le même total, réparti
+  // sur ses places fortes historiques.
+  const total = (g) => g.reduce((s, [, e]) => s + e, 0);
+  const moyenne =
+    Object.values(FORCES_INITIALES).reduce((s, g) => s + total(g), 0) /
+    Object.keys(FORCES_INITIALES).length;
+
+  for (const [idEmpire, garnisonsInitiales] of Object.entries(FORCES_INITIALES)) {
+    const facteur = etat.options.forcesEgales ? moyenne / total(garnisonsInitiales) : 1;
+    const garnisons = garnisonsInitiales.map(([id, e]) => [id, Math.round(e * facteur)]);
     for (const [idTerritoire, effectif] of garnisons) {
       const territoire = etat.carte.territoires[idTerritoire];
       if (!territoire) {

@@ -48,14 +48,17 @@ permet de ne plus l'afficher au démarrage&nbsp;; il reste accessible par `H`.
       se liguent contre l'hégémon et savent demander un armistice.
 - [x] **Phase 5 — Traités et victoire** : négociations qui cèdent les provinces
       occupées, annexion, reddition, élimination, conditions de victoire.
-- [ ] **Phase 6 — Finitions** : équilibrage, sauvegarde, aide en jeu.
+- [x] **Phase 6 — Vraies frontières et gouvernement** : carte tracée sur les
+      frontières réelles, réglages de partie (dont les doctrines égales),
+      croissance de la population par choix sociaux, budget et dette publique.
 
 ## Architecture
 
 ```
 index.html            page et ossature de l'interface
 css/style.css         thème Empire
-js/data/monde.js      contours des continents + une capitale par province
+js/data/monde.js      provinces : nom, capitale, terrain, gisements, souverain
+js/data/frontieres.js contours réels (généré par outils/frontieres.py)
 js/data/empires.js    puissances, couleurs, doctrines
 js/map/geo.js         projection de Mercator et géométrie des polygones
 js/map/carte.js       frontières calculées (Voronoï découpé par la côte)
@@ -67,6 +70,8 @@ js/core/diplomatie.js paix et guerre
 js/core/ia_militaire.js conduite des armées non jouées
 js/core/ia_strategie.js décisions des cabinets : alliances, guerres, paix
 js/core/traites.js    traités, annexion, reddition, élimination, victoire
+js/core/politiques.js choix sociaux, impôt, dette, croissance de la population
+outils/frontieres.py  fabrique js/data/frontieres.js depuis Natural Earth
 js/ui/traite.js       table des négociations
 js/core/tour.js       ordre des systèmes dans une journée
 js/data/langue.js     articles et élisions (« aux États-Unis », « d'Île-de-France »)
@@ -81,15 +86,29 @@ js/main.js            assemblage et contrôles
 
 ### Comment la carte est construite
 
-Dessiner à la main 84 provinces jointives serait fastidieux et source de trous.
-À la place, `js/data/monde.js` ne décrit que **la ligne de côte de chaque continent**
-et **un point par province** (sa capitale). `js/map/carte.js` calcule ensuite le
-diagramme de Voronoï de ces points, découpé par la côte : les frontières sont
-exactes et jointives, et l'adjacence entre provinces se déduit des arêtes
-partagées. Les détroits et routes maritimes sont ajoutés à la main
+Les frontières sont **réelles**. `outils/frontieres.py` fait correspondre chaque
+province du jeu à de véritables entités administratives — pays, régions
+françaises, Länder allemands, régions italiennes, voïvodies polonaises — tirées de
+[Natural Earth](https://github.com/nvkelso/natural-earth-vector), les rastérise sur
+une grille de 0,15° (environ 17 km), attribue les terres non revendiquées à la
+province dont la capitale est la plus proche, puis retrace les contours obtenus, les
+lisse (Chaikin) et les simplifie (Douglas–Peucker).
+
+Le résultat est écrit dans `js/data/frontieres.js` : 84 provinces, 13 600 points,
+200 Ko. L'**adjacence** en sort aussi, déduite du voisinage réel des cellules — la
+Bavière touche l'Autriche, la Bohême, la Rhénanie, la Saxe et la Souabe, ni plus ni
+moins. Seuls les détroits et les routes maritimes restent déclarés à la main
 (`LIAISONS_MARITIMES`).
 
-Ajouter une province tient donc en une ligne de données.
+Le script se relance ainsi, après avoir téléchargé les deux fichiers cités dans son
+en-tête :
+
+```bash
+python3 outils/frontieres.py <dossier_geojson> js/data/frontieres.js
+```
+
+Ajouter une province tient en une ligne dans `monde.js` et une entrée dans la table
+de correspondance du script.
 
 ### Comment tourne l'économie
 
@@ -199,6 +218,40 @@ dernière province de droit **disparaît**. Trois chemins mènent à la victoire
 Le seuil d'hégémonie a été fixé sur mesure&nbsp;: en partie simulée, les vainqueurs
 culminent entre 28 et 40&nbsp;% avant que la voie des traités ne l'emporte. Au-dessus de
 45&nbsp;%, la condition ne se déclencherait jamais.
+
+### Le gouvernement : budget, impôt et choix sociaux
+
+Le **budget** se lit en or et par jour. Recettes : l'impôt, qui vient des sujets, et
+les mines et le commerce. Dépenses : l'administration des provinces, la solde des
+armées, les politiques décrétées et les intérêts de la dette. Le taux d'imposition se
+règle de 40 à 160&nbsp;%&nbsp;: presser le contribuable rapporte et coûte du moral,
+l'alléger fait l'inverse.
+
+Un déficit ne ruine pas l'État sur-le-champ&nbsp;: il **emprunte**, à 7&nbsp;% l'an,
+tant que la dette reste sous huit dixièmes des recettes annuelles. Au-delà, les
+banquiers ferment leurs guichets, la solde n'est plus versée et les armées fondent.
+
+Cinq **choix sociaux** se décrètent, chacun payé chaque jour au prorata de la
+population : hospices et hygiène, écoles et académies, grands travaux, conscription
+générale, abolition des privilèges. Ils jouent sur la natalité, le moral, les réserves
+d'hommes, la vitesse des chantiers et le rendement de l'impôt.
+
+La **population** d'une province est un nombre continu, exprimé en millions. Elle
+croît quand le moral est bon, recule sous la disette et l'occupation, et bute sur un
+plafond valant 2 plus le développement — que les choix sociaux relèvent ou abaissent.
+Mesuré sur vingt ans dans une province de développement 2 au moral 65&nbsp;: 2,0 → 4,0
+sans politique, 5,0 avec hospices et abolition, 3,7 sous conscription.
+
+### Régler la partie
+
+Le menu propose trois réglages, sous **Règles de la partie**&nbsp;:
+
+- **Doctrines égales** — toutes les puissances reçoivent la même doctrine. L'élan des
+  troupes napoléoniennes, la ténacité russe et la discipline prussienne disparaissent :
+  deux corps de même effectif se battent alors à égalité stricte.
+- **Forces égales** — chaque grande puissance débute avec le même effectif total.
+- **Ardeur des cabinets rivaux** — prudente, normale ou implacable : à quelle fréquence
+  les puissances non jouées déclarent la guerre.
 
 ### La France est-elle jouable ?
 

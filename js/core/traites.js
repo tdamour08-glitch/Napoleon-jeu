@@ -15,12 +15,10 @@
 import { journaliser, alerter } from './etat.js';
 import { sontEnGuerre, conclureArmistice, ajusterOpinion, ennemis } from './diplomatie.js';
 import { avecArticle, genitif, prepositionDe } from '../data/langue.js';
+import { PROVINCES_EUROPEENNES } from '../data/monde.js';
 
 /** Les puissances qui disputent la partie. */
 export const GRANDES_PUISSANCES = ['fra', 'gbr', 'pru', 'aut', 'rus', 'esp', 'ott'];
-
-/** Continents qui composent l'Europe au sens des conditions de victoire. */
-const CONTINENTS_EUROPEENS = new Set(['europe', 'grande_bretagne', 'irlande', 'sicile']);
 
 /**
  * Part des provinces européennes qui vaut victoire par hégémonie.
@@ -305,7 +303,7 @@ export function verifierEliminations(etat) {
 
 /** Provinces d'Europe, base des conditions de victoire. */
 function provincesEuropeennes(etat) {
-  return etat.carte.ordre.filter((id) => CONTINENTS_EUROPEENS.has(etat.carte.territoires[id].continent));
+  return etat.carte.ordre.filter((id) => PROVINCES_EUROPEENNES.has(id));
 }
 
 /**

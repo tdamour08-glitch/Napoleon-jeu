@@ -26,6 +26,40 @@
 
     <div id="liste-empires" class="grille-empires"></div>
 
+    <details class="bloc-options">
+      <summary>Règles de la partie</summary>
+      <div class="grille-options">
+        <label class="option">
+          <input type="checkbox" id="opt-doctrines">
+          <span>
+            <strong>Doctrines égales</strong>
+            <em>Toutes les puissances se valent au combat. Les avantages propres à
+            chaque armée — dont celui des troupes napoléoniennes — sont annulés :
+            une bataille à effectifs égaux se joue à égalité stricte.</em>
+          </span>
+        </label>
+        <label class="option">
+          <input type="checkbox" id="opt-forces">
+          <span>
+            <strong>Forces égales</strong>
+            <em>Chaque grande puissance débute avec le même effectif total,
+            réparti sur ses places fortes.</em>
+          </span>
+        </label>
+        <label class="option option-large">
+          <span>
+            <strong>Ardeur des cabinets rivaux</strong>
+            <em>À quel point les puissances non jouées cherchent la guerre.</em>
+          </span>
+          <select id="opt-agressivite">
+            <option value="prudente">Prudente</option>
+            <option value="normale" selected>Normale</option>
+            <option value="implacable">Implacable</option>
+          </select>
+        </label>
+      </div>
+    </details>
+
     <div class="menu-pied">
       <div id="apercu-empire" class="apercu-empire">
         <p class="apercu-vide">Sélectionnez un empire pour consulter sa situation.</p>
@@ -205,7 +239,52 @@
       </section>
 
       <section>
-        <h3>6. Le marché</h3>
+        <h3>6. Le budget</h3>
+        <p>
+          Le panneau <strong>Économie</strong> tient les comptes de l'État, en or et
+          par jour. Au crédit&nbsp;: l'<strong>impôt</strong>, qui vient de vos sujets, et
+          les <strong>mines et le commerce</strong>. Au débit&nbsp;: l'administration
+          des provinces, la <strong>solde des armées</strong> — de loin le premier poste
+          en temps de guerre —, vos politiques et les intérêts de la dette.
+        </p>
+        <p>
+          Le curseur d'<strong>impôt</strong> va de 40 à 160&nbsp;%. Presser le
+          contribuable rapporte, mais coûte du moral dans toutes vos provinces&nbsp;;
+          alléger la charge fait l'inverse.
+        </p>
+        <p class="note">
+          Un budget en déficit ne ruine pas l'État du jour au lendemain&nbsp;: il
+          <strong>emprunte</strong>. La dette porte 7&nbsp;% l'an, et les banquiers ne
+          prêtent pas au-delà de huit dixièmes de vos recettes annuelles. Passé ce point,
+          la solde n'est plus versée et les armées fondent.
+        </p>
+      </section>
+
+      <section>
+        <h3>7. Les choix sociaux</h3>
+        <p>
+          Cinq grandes politiques se décrètent depuis le même panneau. Chacune se paie
+          chaque jour, proportionnellement au nombre de vos sujets&nbsp;:
+        </p>
+        <ul>
+          <li><strong>Hospices et hygiène</strong> — la population croît bien plus vite et plus haut&nbsp;;</li>
+          <li><strong>Écoles et académies</strong> — les chantiers avancent d'un tiers plus vite&nbsp;;</li>
+          <li><strong>Grands travaux</strong> — le moral des provinces monte&nbsp;;</li>
+          <li><strong>Conscription générale</strong> — réserves d'hommes très augmentées, moral et natalité en baisse&nbsp;;</li>
+          <li><strong>Abolition des privilèges</strong> — plus de naissances et plus de confiance, mais l'impôt rentre moins bien.</li>
+        </ul>
+        <p>
+          La <strong>population</strong> d'une province, exprimée en millions, croît
+          d'elle-même quand le moral est bon, et recule sous la disette ou l'occupation.
+          Elle ne dépasse jamais ce que ses infrastructures peuvent porter&nbsp;: le
+          plafond vaut 2 plus le développement, que les choix sociaux relèvent ou
+          abaissent. Plus de sujets, c'est plus d'impôt, plus de production et plus de
+          recrues — la démographie est une arme.
+        </p>
+      </section>
+
+      <section>
+        <h3>8. Le marché</h3>
         <p>
           Le bouton <strong>Économie</strong> ouvre votre trésor. Vous y vendez vos surplus
           contre de l'or et rachetez ce qui vous manque, par lots de 50. Les marchands
@@ -215,7 +294,7 @@
       </section>
 
       <section>
-        <h3>7. Lever et conduire une armée</h3>
+        <h3>9. Lever et conduire une armée</h3>
         <p>
           Dans une de vos provinces, ordonnez une <strong>levée</strong>&nbsp;: elle puise
           dans vos <strong>réserves d'hommes</strong>, coûte or, fer et bois, et met vingt
@@ -234,7 +313,7 @@
       </section>
 
       <section>
-        <h3>8. Batailles et motivation</h3>
+        <h3>10. Batailles et motivation</h3>
         <p>
           Deux puissances en guerre dont les troupes se trouvent dans la même province se
           livrent bataille jour après jour. Les pertes suivent le rapport des forces&nbsp;;
@@ -255,7 +334,7 @@
       </section>
 
       <section>
-        <h3>9. Le cabinet diplomatique</h3>
+        <h3>11. Le cabinet diplomatique</h3>
         <p>
           Le bouton <strong>Diplomatie</strong> ouvre le registre des puissances&nbsp;:
           leur relation avec vous, et l'<strong>estime</strong> qu'elles vous portent,
@@ -275,7 +354,7 @@
       </section>
 
       <section>
-        <h3>10. Occuper n'est pas annexer</h3>
+        <h3>12. Occuper n'est pas annexer</h3>
         <p>
           Une province tenue douze jours sans opposition passe sous votre
           <strong>occupation</strong>&nbsp;: elle vous rapporte, mais moitié moins, paie
@@ -298,7 +377,7 @@
       </section>
 
       <section>
-        <h3>11. Gagner la partie</h3>
+        <h3>13. Gagner la partie</h3>
         <p>Une partie se gagne de trois manières&nbsp;:</p>
         <ul>
           <li><strong>Par les traités</strong> — vous avez arraché des provinces à chacune
@@ -321,7 +400,7 @@
       </section>
 
       <section>
-        <h3>12. Le moral civil</h3>
+        <h3>14. Le moral civil</h3>
         <p>
           Chaque province a un moral qui monte avec le développement et tombe avec les
           pénuries, l'éloignement colonial et l'occupation militaire. Une population
@@ -330,10 +409,16 @@
       </section>
 
       <section>
-        <h3>13. Ce qui vient ensuite</h3>
-        <ul>
-          <li><strong>Phase 6</strong>&nbsp;: équilibrage, sauvegarde de la partie, finitions.</li>
-        </ul>
+        <h3>15. Régler la partie</h3>
+        <p>
+          Au menu, le volet <strong>Règles de la partie</strong> propose trois réglages.
+          <strong>Doctrines égales</strong> annule les qualités militaires propres à
+          chaque puissance — l'avantage caché des troupes napoléoniennes compris — pour
+          que deux corps de même effectif se battent à égalité stricte.
+          <strong>Forces égales</strong> donne à chaque grande puissance le même effectif
+          de départ. L'<strong>ardeur des cabinets rivaux</strong> règle enfin la
+          fréquence à laquelle ils déclarent la guerre.
+        </p>
       </section>
     </div>
 
