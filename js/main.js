@@ -19,7 +19,9 @@ import {
   rompreAlliance,
   conclureAlliance,
   verserSubside,
+  influencerEntente,
 } from './core/diplomatie.js';
+import { lancerAssimilation, abandonnerAssimilation } from './core/assimilation.js';
 import { repondreAlliance } from './core/ia_strategie.js';
 import { appliquerTraite, evaluerTraite, partEuropeenne, GRANDES_PUISSANCES } from './core/traites.js';
 import { TableDesNegociations } from './ui/traite.js';
@@ -100,6 +102,19 @@ async function demarrer() {
     },
     rompreAlliance: (idCible) => {
       rompreAlliance(etat, etat.joueur, idCible);
+    },
+    assimiler: (id, methode) => {
+      const verdict = lancerAssimilation(etat, etat.carte.territoires[id], methode);
+      if (!verdict.possible) journaliser(etat, verdict.motif);
+      recalculerEconomie(etat);
+    },
+    abandonnerAssimilation: (id) => {
+      abandonnerAssimilation(etat, etat.carte.territoires[id]);
+      recalculerEconomie(etat);
+    },
+    influencer: (a, b, sens, montant) => {
+      const resultat = influencerEntente(etat, etat.joueur, a, b, sens, montant);
+      ui.annoncerReponse(resultat.motif, resultat.ok);
     },
     verserSubside: (idCible) => {
       const resultat = verserSubside(etat, etat.joueur, idCible);

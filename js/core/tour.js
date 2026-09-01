@@ -13,6 +13,7 @@ import { conduireArmeesBots } from './ia_militaire.js';
 import { conduireDiplomatieBots, suivreGuerres, expirerOffres } from './ia_strategie.js';
 import { verifierRedditions, verifierEliminations, verifierVictoire } from './traites.js';
 import { avancerRevolte, signalerRevoltes } from './revolte.js';
+import { avancerAssimilation } from './assimilation.js';
 
 export function jouerUnJour(etat) {
   // Une partie terminée ne se poursuit pas.
@@ -29,7 +30,11 @@ export function jouerUnJour(etat) {
   appliquerJourCombat(etat);
 
   // 4. Ce que les peuples en pensent : jauges de révolte et soulèvements.
-  for (const id of etat.carte.ordre) avancerRevolte(etat, etat.carte.territoires[id]);
+  for (const id of etat.carte.ordre) {
+    const territoire = etat.carte.territoires[id];
+    avancerAssimilation(etat, territoire);
+    avancerRevolte(etat, territoire);
+  }
   signalerRevoltes(etat);
 
   // 5. Décisions des puissances non jouées : cabinet, puis état-major.

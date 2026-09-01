@@ -760,3 +760,31 @@ html, body {
 .politique.acquise { cursor: default; background: rgba(201,162,39,.08); border-color: rgba(201,162,39,.3); }
 .politique.acquise:hover { background: rgba(201,162,39,.08); }
 .politique .marque { color: var(--or); font-size: 13px; line-height: 1.2; }
+
+/* Assimilation : une voie par encadré, dans le panneau de province */
+.voie-assimilation {
+  margin-top: 10px; padding: 8px 9px;
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--bordure); border-radius: 3px;
+}
+.voie-assimilation .entete-voie {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: 13px;
+}
+.voie-assimilation .duree { font-size: 12px; color: var(--texte-doux); font-variant-numeric: tabular-nums; }
+.voie-assimilation .action-chantier { margin-top: 7px; padding: 6px 8px; font-size: 12px; }
+.action-chantier.danger {
+  background: var(--nuit-3); color: #f0b3a6;
+  border: 1px solid rgba(200,80,60,.5);
+}
+.motif-chantier.alerte { color: #e07b6a; font-style: normal; }
+
+/* Intrigues : deux cabinets côte à côte */
+.paire-intrigue { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.paire-intrigue select {
+  flex: 1; min-width: 0; padding: 4px 5px;
+  font-family: inherit; font-size: 12px;
+  color: var(--texte); background: var(--nuit-3);
+  border: 1px solid var(--bordure); border-radius: 3px;
+}
+.paire-intrigue > span { font-size: 12px; color: var(--texte-doux); }

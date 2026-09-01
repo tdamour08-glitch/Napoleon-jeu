@@ -16,7 +16,7 @@ export const VERSION = 3;
 /** Champs d'une province qui évoluent en cours de partie. */
 const CHAMPS_TERRITOIRE = [
   'maitre', 'occupant', 'developpement', 'chantier', 'levee', 'moral',
-  'population', 'occupationEnCours', 'revolte', 'regimeRevolte', 'culture',
+  'population', 'occupationEnCours', 'revolte', 'regimeRevolte', 'culture', 'assimilation',
 ];
 
 /** Champs d'un empire qui évoluent en cours de partie. */
@@ -58,6 +58,7 @@ export function serialiser(etat) {
     debutsDeGuerre: etat.debutsDeGuerre,
     dernieresGuerres: etat.dernieresGuerres,
     subsides: etat.subsides,
+    intrigues: etat.intrigues,
     alertesEmises: etat.alertesEmises,
     journal: etat.journal,
     fin: etat.fin,
@@ -100,6 +101,7 @@ export function restaurer(donnees) {
   etat.debutsDeGuerre = donnees.debutsDeGuerre ?? {};
   etat.dernieresGuerres = donnees.dernieresGuerres ?? {};
   etat.subsides = donnees.subsides ?? {};
+  etat.intrigues = donnees.intrigues ?? {};
   etat.alertesEmises = donnees.alertesEmises ?? {};
   etat.journal = donnees.journal ?? [];
   etat.fin = donnees.fin ?? null;

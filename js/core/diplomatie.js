@@ -253,6 +253,93 @@ export function attenteSubside(etat, a, b) {
   return Math.max(0, SUBSIDE.delai - (etat.jourEcoule - dernier));
 }
 
+/* ------------------------------------------------------------
+   Intrigues : peser sur l'entente entre deux puissances
+   ------------------------------------------------------------ */
+
+/**
+ * Rapprocher deux cabinets coûte de l'or — et d'autant plus qu'on veut
+ * qu'ils s'aiment. Les brouiller ne coûte rien : une rumeur bien placée
+ * suffit. Mais l'intrigue s'ébruite toujours un peu, et les deux
+ * puissances finissent par savoir d'où venait le vent.
+ */
+export const INTRIGUES = {
+  rapprocher: [
+    { montant: 120, effet: 5, nom: 'Bons offices' },
+    { montant: 350, effet: 12, nom: 'Médiation' },
+    { montant: 800, effet: 22, nom: 'Congrès' },
+  ],
+  brouiller: { effet: -14, retour: -4 },
+  delai: 90,
+};
+
+/** Jours restant avant de pouvoir agir de nouveau sur ce couple. */
+export function attenteIntrigue(etat, a, b) {
+  const dernier = etat.intrigues[cle(a, b)] ?? -INTRIGUES.delai;
+  return Math.max(0, INTRIGUES.delai - (etat.jourEcoule - dernier));
+}
+
+/**
+ * Agit sur l'entente entre deux puissances, qui peuvent être tierces.
+ * @param {string} sens 'rapprocher' ou 'brouiller'
+ * @param {number} montant somme versée, pour un rapprochement
+ * @returns {{ok: boolean, motif: string}}
+ */
+export function influencerEntente(etat, instigateur, a, b, sens, montant = 0) {
+  if (a === b) return { ok: false, motif: 'Il faut deux puissances distinctes.' };
+  const premier = etat.empires[a];
+  const second = etat.empires[b];
+  if (!premier?.vivant || !second?.vivant) {
+    return { ok: false, motif: 'Cette puissance n\'existe plus.' };
+  }
+  if (attenteIntrigue(etat, a, b) > 0) {
+    return { ok: false, motif: `Vos émissaires viennent d'agir. Patientez ${attenteIntrigue(etat, a, b)} jours.` };
+  }
+
+  const cabinet = etat.empires[instigateur];
+
+  if (sens === 'rapprocher') {
+    const palier = INTRIGUES.rapprocher.find((x) => x.montant === montant) ?? INTRIGUES.rapprocher[0];
+    if (cabinet.stocks.or < palier.montant) return { ok: false, motif: 'Le Trésor ne suit pas.' };
+    if (sontEnGuerre(etat, a, b)) {
+      return { ok: false, motif: 'On ne réconcilie pas deux puissances en guerre par des présents.' };
+    }
+    cabinet.stocks.or -= palier.montant;
+    ajusterOpinion(etat, a, b, palier.effet);
+    ajusterOpinion(etat, b, a, palier.effet);
+    // On sait gré à qui a payé.
+    if (instigateur !== a) ajusterOpinion(etat, a, instigateur, palier.effet / 3);
+    if (instigateur !== b) ajusterOpinion(etat, b, instigateur, palier.effet / 3);
+    etat.intrigues[cle(a, b)] = etat.jourEcoule;
+    if (cabinet.estJoueur) {
+      journaliser(
+        etat,
+        `Vos émissaires rapprochent ${avecArticle(premier)} et ${avecArticle(second)} ` +
+          `pour ${palier.montant} pièces d'or.`,
+      );
+    }
+    return { ok: true, motif: `${palier.nom} : leur entente se resserre de ${palier.effet} points.` };
+  }
+
+  ajusterOpinion(etat, a, b, INTRIGUES.brouiller.effet);
+  ajusterOpinion(etat, b, a, INTRIGUES.brouiller.effet);
+  // L'intrigue s'ébruite : les deux cabinets s'en souviennent.
+  if (instigateur !== a) ajusterOpinion(etat, a, instigateur, INTRIGUES.brouiller.retour);
+  if (instigateur !== b) ajusterOpinion(etat, b, instigateur, INTRIGUES.brouiller.retour);
+  etat.intrigues[cle(a, b)] = etat.jourEcoule;
+  if (cabinet.estJoueur) {
+    journaliser(
+      etat,
+      `Vos agents brouillent ${avecArticle(premier)} et ${avecArticle(second)}. ` +
+        `La rumeur finira par remonter jusqu'à vous.`,
+    );
+  }
+  return {
+    ok: true,
+    motif: `Leur entente se dégrade de ${-INTRIGUES.brouiller.effet} points — et l'on vous soupçonne.`,
+  };
+}
+
 /** Les puissances en guerre contre au moins un ennemi commun. */
 export function ennemisCommuns(etat, a, b) {
   const mesEnnemis = new Set(ennemis(etat, a));

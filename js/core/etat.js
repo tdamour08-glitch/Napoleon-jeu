@@ -194,6 +194,7 @@ export function creerPartie(idEmpireJoueur, options = {}) {
     debutsDeGuerre: {},
     dernieresGuerres: {},
     subsides: {},
+    intrigues: {},
     equilibre: null,
     economieARecalculer: false,
   };

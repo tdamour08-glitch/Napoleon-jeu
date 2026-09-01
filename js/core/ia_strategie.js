@@ -40,7 +40,8 @@ import {
   lassitude,
 } from './traites.js';
 import { avecArticle } from '../data/langue.js';
-import { revendicationsDe, revendicationsContre } from './revolte.js';
+import { revendicationsDe, revendicationsContre, estNoyau } from './revolte.js';
+import { verifierAssimilation, lancerAssimilation } from './assimilation.js';
 
 /** Une délibération tous les quinze jours par puissance. */
 const PERIODE = 15;
@@ -209,10 +210,41 @@ function majOpinions(etat, empire, puissances, equilibre) {
 
 /** Une puissance décide de sa politique pour les quinze jours à venir. */
 function deliberer(etat, empire, equilibre) {
+  ouvrirAssimilations(etat, empire);
   distribuerSubsides(etat, empire, equilibre);
   if (chercherPaix(etat, empire, equilibre)) return;
   if (chercherAlliance(etat, empire, equilibre)) return;
   chercherGuerre(etat, empire, equilibre);
+}
+
+/**
+ * Un cabinet en paix et en fonds finit par vouloir digérer ses conquêtes.
+ * Il s'attaque à la province qui gronde le plus, par la voie que ses caisses
+ * lui permettent : la prospérité s'il est riche, le peuplement sinon — la
+ * troupe seulement quand une garnison suffisante s'y trouve déjà.
+ */
+function ouvrirAssimilations(etat, empire) {
+  if (empire.stocks.or < empire.capacite * 0.55) return;
+  // On ne francise pas en pleine guerre : l'argent va aux armées.
+  if (ennemis(etat, empire.id).length > 0) return;
+  // Un chantier à la fois : l'assimilation est une entreprise, pas une politique.
+  const enCours = empire.territoires.filter((id) => etat.carte.territoires[id].assimilation);
+  if (enCours.length > 0) return;
+
+  const candidates = empire.territoires
+    .map((id) => etat.carte.territoires[id])
+    .filter((t) => t.maitre === empire.id && !estNoyau(etat, t, empire.id) && !t.assimilation)
+    .sort((a, b) => (b.revolte ?? 0) - (a.revolte ?? 0));
+  if (!candidates.length) return;
+
+  const province = candidates[0];
+  if ((province.revolte ?? 0) < 35) return;
+  for (const methode of ['troupe', 'prosperite', 'peuplement']) {
+    if (verifierAssimilation(etat, province, methode).possible) {
+      lancerAssimilation(etat, province, methode);
+      return;
+    }
+  }
 }
 
 /**

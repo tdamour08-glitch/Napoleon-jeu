@@ -74,6 +74,7 @@ js/core/ia_strategie.js décisions des cabinets : alliances, guerres, paix
 js/core/traites.js    traités, annexion, reddition, élimination, victoire
 js/core/politiques.js choix sociaux, impôt, dette, croissance de la population
 js/core/revolte.js    cultures, noyau national, jauge de révolte, revendications
+js/core/assimilation.js rallier une province étrangère à sa culture (trois voies)
 js/core/sauvegarde.js enregistrement, reprise, export et import de partie
 outils/frontieres.py  fabrique js/data/frontieres.js depuis Natural Earth
 js/ui/traite.js       table des négociations
@@ -344,10 +345,72 @@ un État pour les porter, et c'est là que naissent les guerres : le **Canada es
 culture française** sous drapeau britannique, la **Silésie autrichienne** sous drapeau
 prussien, la **Galicie polonaise** sous drapeau autrichien.
 
-Mesuré sur cinq parties de vingt-cinq ans, le pic de possession européenne passe à
-33,4 % pour la France — de loin le premier —, 27,6 % pour la Russie, 22,8 % pour la
-Prusse, 17,9 % pour le Royaume-Uni et 17,2 % pour l'Autriche. La centralisation est
-devenue l'atout structurant de la partie française.
+Mesuré sur cinq parties de vingt-cinq ans, toutes grandes puissances pilotées, le pic
+moyen de possession européenne s'établit à 31,7 % pour la Prusse, 25,2 % pour la Russie,
+22,8 % pour la France, 21,0 % pour l'Autriche et 17,9 % pour le Royaume-Uni. Aucune
+puissance n'est mécaniquement condamnée&nbsp;: la variance entre parties est large
+(la Prusse va de 21 à 43 %, l'Autriche de 12 à 38 %), et c'est la conduite du cabinet,
+non sa fiche de départ, qui décide.
+
+### Rallier une province à sa culture
+
+Un plafond de révolte n'est pas une fatalité. Une province **annexée** mais étrangère
+peut être ralliée à la culture de qui la tient : elle rejoint alors le noyau national,
+sa jauge tombe à zéro, et plus personne ne peut s'en réclamer. Trois voies, trois prix,
+dans le panneau de province :
+
+| Voie | Durée pour 1 M d'âmes | Coût quotidien | Contraintes |
+|---|---|---|---|
+| **Par la troupe** | ~230 j | 1,8 or + 0,6 fer | 8 000 hommes en garnison, immobilisés ; la révolte **monte** (+0,35/j) tant que dure la répression |
+| **Par le peuplement** | ~1 035 j | 0,4 or + 0,35 eau + 0,3 bois | aucune ; la province s'apaise doucement (−0,05/j) |
+| **Par la prospérité** | ~150 j | 3 or + 1,6 bois + 1,2 fer + 1,2 charbon | aucune ; la plus rapide et la plus chère (−0,2/j) |
+
+La durée suit la population — `duree × (0,6 + population × 0,55)` — car on ne francise
+pas la Lombardie aussi vite qu'une principauté rhénane. Le panneau de province affiche le
+chiffre exact avant tout engagement.
+
+Une occupation ne s'assimile pas : il faut d'abord obtenir la province par traité. Les
+travaux se suspendent d'eux-mêmes — sans perdre l'acquis — si la garnison s'en va ou si
+les caisses ne suivent plus, et la dépense apparaît au budget sous « Assimilation ».
+Mesuré en jeu : la Rhénanie (2,0 M), annexée puis développée par la voie de la prospérité,
+passe de la culture allemande à la culture française en 221 jours, révolte remise à zéro.
+
+Les cabinets rivaux s'en servent aussi, mais seulement en paix, les caisses pleines, et
+sur la province qui gronde le plus — un chantier à la fois. Mesuré sur cinq parties de
+vingt-cinq ans : 71 provinces ralliées au total, soit une quinzaine par partie.
+
+### Les intrigues
+
+Le cabinet permet aussi d'agir sur l'entente de deux **autres** puissances, majeures ou
+mineures. Les rapprocher se paie, et vaut ce qu'il coûte ; les brouiller ne coûte rien,
+mais l'affaire s'ébruite.
+
+| Démarche | Prix | Effet sur leur entente | Retour sur vous |
+|---|---|---|---|
+| Bons offices | 120 or | +5 | +1,7 d'estime de chacun |
+| Médiation | 350 or | +12 | +4 d'estime de chacun |
+| Congrès | 800 or | +22 | +7,3 d'estime de chacun |
+| **Brouiller** | gratuit | −14 | −4 d'estime de chacun |
+
+Trois mois de délai avant de revenir sur le même couple, et l'on ne rapproche pas deux
+puissances déjà en guerre. Brouiller est la manœuvre du faible : on défait une coalition
+en la divisant, faute de pouvoir l'acheter.
+
+### Le monde tourne sans vous
+
+Les guerres n'attendent pas le joueur. Mesuré sur vingt ans de jeu, joueur strictement
+passif — aucun ordre, aucune démarche —, le nombre de guerres déclarées **entre
+puissances tierces**, sans la moindre intervention :
+
+| Spectateur | Guerres entre tiers | Guerres subies par le spectateur |
+|---|---|---|
+| France | 158 | 13 |
+| Prusse | 95 | 5 |
+| Royaume-Uni | 72 | 7 |
+
+Espagne contre Portugal, Autriche contre Bavière, Russie contre Suède, Qing contre
+Russie : les cabinets se dévorent entre eux selon leurs propres calculs. Rester immobile
+n'est pas une position neutre, c'est laisser l'Europe se redessiner sans soi.
 
 ### Les subsides
 
@@ -366,26 +429,31 @@ traité dès qu'un adversaire plie&nbsp;:
 
 | Ouverture | Résultat |
 |---|---|
-| Ne rien faire de particulier | survit, 22 % de l'Europe, pic à 41 % |
-| Frapper la Prusse aussitôt | survit, 22 %, la menace prussienne est étouffée |
-| Subsides et traités (pacifique) | survit, 22 %, mais ne s'agrandit pas |
-| Dévorer les principautés allemandes | **victoire française en 1815**, 48 % de l'Europe |
+| Ne rien faire de particulier | **victoire par traités en 1816**, 22 % de l'Europe, pic à 40 % |
+| Frapper la Prusse aussitôt | **victoire par traités en 1815**, 29 %, plus un seul ennemi |
+| Subsides et traités (pacifique) | **victoire par hégémonie en 1814**, 47 % de l'Europe |
+| Dévorer les principautés allemandes | pas de victoire en douze ans, 19 % |
 
-Aucune n'est la bonne réponse unique, et la liste n'est pas exhaustive. La voie pacifique
-garde la France en vie et prospère, mais ne mène pas à la victoire&nbsp;: on ne gagne pas
-une guerre napoléonienne en signant des traités seulement.
+Aucune n'est la bonne réponse unique, et la liste n'est pas exhaustive. On notera que la
+voie pacifique — subsides, alliances, traités — est ici la plus payante&nbsp;: on peut
+gagner une guerre napoléonienne sans la mener soi-même. À l'inverse, dévorer les
+principautés allemandes s'est retourné contre le joueur, qui s'est fait des ennemis sans
+gagner assez vite. Le moteur est déterministe, mais fortement sensible aux conditions
+initiales&nbsp;: ces quatre lignes disent que plusieurs conduites gagnent, pas qu'il
+existe un ordre de mérite stable.
 
 ### La France est-elle jouable ?
 
 Question légitime, puisque toute l'Europe se ligue contre elle. Mesuré sur des parties
 simulées de vingt-cinq ans, toutes puissances pilotées&nbsp;:
 
-- la France atteint le **pic de possession européenne le plus élevé** (23,2&nbsp;% en
-  moyenne, à égalité avec l'Autriche et devant les cinq autres)&nbsp;;
-- elle **gagne effectivement** certaines parties, par la voie des traités&nbsp;;
+- **abandonnée à sa propre intelligence artificielle**, la France plafonne autour de
+  22-23&nbsp;% de l'Europe&nbsp;: elle encaisse les coalitions sans en tirer parti&nbsp;;
+- **jouée par un humain**, elle gagne trois ouvertures sur quatre en douze ans (voir le
+  tableau ci-dessus), avec un pic de 40 à 47&nbsp;%&nbsp;;
 - le seul geste qu'un joueur fait et que l'intelligence artificielle néglige — signer un
-  traité dès que l'adversaire plie, au lieu de laisser la guerre s'enliser — fait passer
-  son pic de 23&nbsp;% à 25-32&nbsp;%.
+  traité dès que l'adversaire plie, au lieu de laisser la guerre s'enliser — suffit à
+  faire la différence.
 
 C'est le siège le plus difficile, parce qu'elle est désignée hégémon dès la première
 année et absorbe la première coalition. Ce n'est pas un handicap de règles.

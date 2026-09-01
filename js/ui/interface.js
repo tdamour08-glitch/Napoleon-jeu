@@ -11,7 +11,9 @@ import {
   relation,
   opinion,
   attenteSubside,
+  attenteIntrigue,
   SUBSIDE,
+  INTRIGUES,
   GUERRE,
   ALLIANCE,
 } from '../core/diplomatie.js';
@@ -26,6 +28,11 @@ import {
   regimeRevolte,
   SEUIL_REVENDICATION,
 } from '../core/revolte.js';
+import {
+  METHODES_ASSIMILATION,
+  verifierAssimilation,
+  dureeAssimilation,
+} from '../core/assimilation.js';
 import {
   POLITIQUES,
   POLITIQUES_PAR_ID,
@@ -120,6 +127,12 @@ export class Interface {
           return this.actions.developper(this.etat.selection);
         case 'lever':
           return this.actions.lever(this.etat.selection, cible.dataset.type);
+        case 'assimiler':
+          this.actions.assimiler(this.etat.selection, cible.dataset.methode);
+          return this.rafraichirTerritoireMaintenant();
+        case 'abandonner-assimilation':
+          this.actions.abandonnerAssimilation(this.etat.selection);
+          return this.rafraichirTerritoireMaintenant();
         case 'guerre':
           return this.actions.declarerGuerre(cible.dataset.empire);
         default:
@@ -159,9 +172,23 @@ export class Interface {
           return this.actions.repondreOffre(cible.dataset.cle, cible.dataset.type, true);
         case 'refuser':
           return this.actions.repondreOffre(cible.dataset.cle, cible.dataset.type, false);
+        case 'rapprocher':
+          this.actions.influencer(this.intrigueA, this.intrigueB, 'rapprocher', Number(cible.dataset.montant));
+          return this.rafraichirDiplomatieMaintenant();
+        case 'brouiller':
+          this.actions.influencer(this.intrigueA, this.intrigueB, 'brouiller', 0);
+          return this.rafraichirDiplomatieMaintenant();
         default:
           return undefined;
       }
+    });
+
+    this.el.panneauDiplomatie.addEventListener('change', (ev) => {
+      const cible = ev.target.closest('[data-action="intrigue-cible"]');
+      if (!cible) return;
+      if (cible.dataset.cote === 'a') this.intrigueA = cible.value;
+      else this.intrigueB = cible.value;
+      this.rafraichirDiplomatieMaintenant();
     });
 
     this.el.panneauEconomie.addEventListener('click', (ev) => {
@@ -329,6 +356,8 @@ export class Interface {
       t.chantier ? t.chantier.restant : 'x',
       t.levee ? t.levee.restant : 'x',
       Math.round(t.revolte ?? 0),
+      t.culture ?? '-',
+      t.assimilation ? `${t.assimilation.methode}:${t.assimilation.restant}:${t.assimilation.suspendu ?? '-'}` : 'x',
       controleur(t),
       t.occupant ?? '-',
       this.etat.selectionArmee ?? '-',
@@ -341,6 +370,12 @@ export class Interface {
     this.signatureTerritoire = signature;
     this.derniereSelection = id;
     this.afficherTerritoire(id);
+  }
+
+  /** Reconstruit la province sans attendre le prochain jour de jeu. */
+  rafraichirTerritoireMaintenant() {
+    this.signatureTerritoire = null;
+    if (this.etat.selection) this.afficherTerritoire(this.etat.selection);
   }
 
   afficherTerritoire(id) {
@@ -397,6 +432,7 @@ export class Interface {
       </div>
 
       ${this.blocRevolte(t, tenu)}
+      ${aMoi ? this.blocAssimilation(t, tenu) : ''}
 
       <div class="bloc">
         <h3>Bilan quotidien</h3>
@@ -455,6 +491,92 @@ export class Interface {
             : ''
         }
       </div>`;
+  }
+
+  /**
+   * Rallier une province étrangère à sa propre culture. Trois voies,
+   * trois prix : la troupe, le peuplement, la prospérité.
+   */
+  blocAssimilation(t, tenu) {
+    const etat = this.etat;
+    if (estNoyau(etat, t, tenu.id)) return '';
+
+    // Chantier en cours : avancement, dépense du jour, motif d'arrêt.
+    const chantier = t.assimilation;
+    if (chantier) {
+      const methode = METHODES_ASSIMILATION[chantier.methode];
+      const avancement = (1 - chantier.restant / chantier.duree) * 100;
+      const arret = {
+        garnison: `Suspendue : il faut ${methode.garnison} 000 hommes en garnison sur place.`,
+        penurie: 'Suspendue : les caisses ne suivent plus.',
+      }[chantier.suspendu];
+      return `
+        <div class="bloc">
+          <h3>Assimilation — ${methode.nom.toLowerCase()}</h3>
+          <div class="paire"><span>Reste</span><span>${chantier.restant} jours</span></div>
+          <div class="progression"><i style="width:${avancement.toFixed(1)}%"></i></div>
+          <div class="cout-chantier">${this.coutParJour(methode.cout)}</div>
+          ${arret ? `<p class="motif-chantier alerte">${arret}</p>` : ''}
+          <button class="action-chantier danger" data-action="abandonner-assimilation">
+            Abandonner
+          </button>
+        </div>`;
+    }
+
+    if (t.maitre !== tenu.id) {
+      return `
+        <div class="bloc">
+          <h3>Assimilation</h3>
+          <p class="motif-chantier">
+            Province occupée, non annexée : il faut d'abord l'obtenir par traité.
+          </p>
+        </div>`;
+    }
+
+    const voies = Object.values(METHODES_ASSIMILATION)
+      .map((methode) => {
+        const verdict = verifierAssimilation(etat, t, methode.id);
+        return `
+          <div class="voie-assimilation">
+            <div class="entete-voie">
+              <strong>${methode.nom}</strong>
+              <span class="duree">${dureeAssimilation(t, methode.id)} j</span>
+            </div>
+            <div class="cout-chantier">${this.coutParJour(methode.cout)}</div>
+            <p class="motif-chantier">${methode.resume}</p>
+            <button class="action-chantier" data-action="assimiler" data-methode="${methode.id}"
+                    ${verdict.possible ? '' : 'disabled'}>
+              Entreprendre
+            </button>
+            ${verdict.possible ? '' : `<p class="motif-chantier alerte">${verdict.motif}</p>`}
+          </div>`;
+      })
+      .join('');
+
+    return `
+      <div class="bloc">
+        <h3>Assimilation</h3>
+        <p class="motif-chantier">
+          Une province étrangère peut être ralliée à votre culture. Elle cesse alors
+          de nourrir les prétentions d'autrui, et rejoint votre noyau national.
+        </p>
+        ${voies}
+      </div>`;
+  }
+
+  /** Petite ligne de coût quotidien : une pastille par ressource. */
+  coutParJour(cout) {
+    const empire = this.etat.empires[this.etat.joueur];
+    const detail = Object.entries(cout)
+      .map(([ressource, taux]) => {
+        const r = RESSOURCES.find((res) => res.id === ressource);
+        const manque = empire.penuries?.[ressource];
+        return `<span class="${manque ? 'insuffisant' : ''}">
+                  <span class="pastille" style="background:${r.couleur}"></span>${taux.toFixed(1)}
+                </span>`;
+      })
+      .join('');
+    return `${detail}<span style="margin-left:auto">par jour</span>`;
   }
 
   /** Bloc « levée » du panneau de province : une arme par bouton. */
@@ -568,6 +690,8 @@ export class Interface {
         .join('|'),
       etat.equilibre?.hegemon ?? '-',
       this.reponseDiplomatique?.texte ?? '',
+      `${this.intrigueA ?? ''}>${this.intrigueB ?? ''}`,
+      attenteIntrigue(etat, this.intrigueA, this.intrigueB),
     ].join('#');
     if (signature === this.signatureDiplomatie) return;
     this.signatureDiplomatie = signature;
@@ -652,7 +776,95 @@ export class Interface {
       <h2>Cabinet diplomatique</h2>
       ${blocsOffres}
       ${reponse}
-      <div class="bloc"><h3>Puissances</h3>${lignes}</div>`;
+      <div class="bloc"><h3>Puissances</h3>${lignes}</div>
+      ${this.blocIntrigues()}`;
+  }
+
+  /**
+   * Agir sur l'entente de deux cabinets étrangers. Les rapprocher se paie —
+   * plus la démarche est somptueuse, plus elle porte. Les brouiller ne coûte
+   * rien, sinon le risque d'être découvert.
+   */
+  blocIntrigues() {
+    const etat = this.etat;
+    const cours = Object.values(etat.empires)
+      .filter((e) => e.vivant)
+      .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+    if (cours.length < 2) return '';
+
+    // Défauts : les deux puissances les plus étendues, hors soi-même.
+    const autres = cours
+      .filter((e) => e.id !== etat.joueur)
+      .slice()
+      .sort((a, b) => b.territoires.length - a.territoires.length);
+    if (!this.intrigueA || !etat.empires[this.intrigueA]?.vivant) this.intrigueA = autres[0]?.id;
+    if (!this.intrigueB || !etat.empires[this.intrigueB]?.vivant) {
+      this.intrigueB = autres.find((e) => e.id !== this.intrigueA)?.id;
+    }
+    const a = this.intrigueA;
+    const b = this.intrigueB;
+    const memeCabinet = !a || !b || a === b;
+    const attente = memeCabinet ? 0 : attenteIntrigue(etat, a, b);
+    const guerre = !memeCabinet && sontEnGuerre(etat, a, b);
+    const or = etat.empires[etat.joueur].stocks.or;
+
+    const choix = (nom, valeur) => `
+      <select data-action="intrigue-cible" data-cote="${nom}">
+        ${cours
+          .map(
+            (e) =>
+              `<option value="${e.id}" ${e.id === valeur ? 'selected' : ''}>${e.nom}</option>`,
+          )
+          .join('')}
+      </select>`;
+
+    const entente = memeCabinet ? null : Math.round((opinion(etat, a, b) + opinion(etat, b, a)) / 2);
+
+    const paliers = INTRIGUES.rapprocher
+      .map(
+        (palier) => `
+        <button class="bouton-mini" data-action="rapprocher" data-montant="${palier.montant}"
+                title="${palier.nom} : +${palier.effet} points d'entente"
+                ${memeCabinet || attente > 0 || guerre || or < palier.montant ? 'disabled' : ''}>
+          ${palier.nom} · ${palier.montant} or
+        </button>`,
+      )
+      .join('');
+
+    return `
+      <div class="bloc">
+        <h3>Intrigues</h3>
+        <div class="paire-intrigue">${choix('a', a)}<span>et</span>${choix('b', b)}</div>
+        ${
+          memeCabinet
+            ? '<p class="motif-chantier">Choisissez deux cabinets différents.</p>'
+            : `<div class="paire"><span>Entente</span>
+                 <span style="color:${couleurEstime(entente)}">${entente > 0 ? '+' : ''}${entente}</span></div>`
+        }
+        <div class="actions-relation">${paliers}</div>
+        <div class="actions-relation">
+          <button class="bouton-mini danger" data-action="brouiller"
+                  title="Gratuit : ${-INTRIGUES.brouiller.effet} points d'entente en moins, au risque d'être démasqué"
+                  ${memeCabinet || attente > 0 ? 'disabled' : ''}>
+            Brouiller · gratuit
+          </button>
+        </div>
+        <p class="motif-chantier">
+          ${
+            guerre
+              ? 'Ces deux-là sont en guerre : nul congrès ne les rapprochera avant la paix.'
+              : attente > 0
+                ? `Vos émissaires viennent d'agir : ${attente} jours avant d'y revenir.`
+                : 'Plus la démarche est somptueuse, plus elle porte. Brouiller ne coûte rien — sinon le risque d\'être découvert.'
+          }
+        </p>
+      </div>`;
+  }
+
+  /** Reconstruit le cabinet sans attendre le prochain jour de jeu. */
+  rafraichirDiplomatieMaintenant() {
+    this.signatureDiplomatie = null;
+    this.rafraichirDiplomatie();
   }
 
   /** Affiche la réponse d'un cabinet étranger jusqu'à la prochaine démarche. */
@@ -921,7 +1133,7 @@ export class Interface {
   blocBudget(empire) {
     const b = empire.budget;
     const recettes = b.impots + (b.commerce ?? 0) + b.ressources;
-    const depenses = b.administration + b.armee + b.politiques + b.interets;
+    const depenses = b.administration + b.armee + b.politiques + (b.assimilation ?? 0) + b.interets;
     const solde = recettes - depenses;
     const plafond = plafondEmprunt(empire);
     const lourde = empire.dette > plafond * 0.6;
@@ -937,6 +1149,11 @@ export class Interface {
           <div class="budget-ligne depense"><span>Administration</span><span>−${b.administration.toFixed(1)}</span></div>
           <div class="budget-ligne depense"><span>Solde des armées</span><span>−${b.armee.toFixed(1)}</span></div>
           <div class="budget-ligne depense"><span>Politiques</span><span>−${b.politiques.toFixed(1)}</span></div>
+          ${
+            (b.assimilation ?? 0) > 0
+              ? `<div class="budget-ligne depense"><span>Assimilation</span><span>−${b.assimilation.toFixed(1)}</span></div>`
+              : ''
+          }
           <div class="budget-ligne depense"><span>Intérêts de la dette</span><span>−${b.interets.toFixed(2)}</span></div>
           <div class="budget-ligne total">
             <span>Solde</span>

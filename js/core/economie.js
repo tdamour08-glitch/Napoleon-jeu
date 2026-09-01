@@ -13,6 +13,7 @@ import { RESSOURCES } from '../data/empires.js';
 import { controleur, estOccupe, recenserTerritoires, alerter, journaliser } from './etat.js';
 import { entretienMilitaire, regenererReserves, calculerReservesMax, estPort } from './armees.js';
 import { malusRevolte } from './revolte.js';
+import { coutAssimilation } from './assimilation.js';
 import {
   effetsPolitiques,
   coutPolitiques,
@@ -131,7 +132,7 @@ export function recalculerEconomie(etat) {
   for (const empire of Object.values(etat.empires)) {
     empire.budget = {
       impots: 0, commerce: 0, ressources: 0,
-      administration: 0, armee: 0, politiques: 0, interets: 0,
+      administration: 0, armee: 0, politiques: 0, assimilation: 0, interets: 0,
     };
   }
 
@@ -177,6 +178,10 @@ export function recalculerEconomie(etat) {
     const social = coutPolitiques(etat, empire);
     for (const r of RESSOURCES) empire.consommation[r.id] += social[r.id] ?? 0;
     empire.budget.politiques = social.or ?? 0;
+
+    const culturel = coutAssimilation(etat, empire.id);
+    for (const r of RESSOURCES) empire.consommation[r.id] += culturel[r.id] ?? 0;
+    empire.budget.assimilation = culturel.or ?? 0;
 
     empire.consommation.or += empire.interets;
     empire.budget.interets = empire.interets;
