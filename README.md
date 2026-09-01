@@ -13,6 +13,28 @@ python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
 
+### S'héberger soi-même sous Windows
+
+Double-cliquez **`servir.bat`** à la racine du dépôt. Il cherche dans l'ordre Python,
+Node, puis PowerShell — qui est livré avec Windows —, démarre un serveur sur le port
+8000 et ouvre le navigateur. Fermer la fenêtre arrête le serveur.
+
+Le repli PowerShell est `outils/servir.ps1` : un serveur de fichiers statiques bâti sur
+`HttpListener`, une centaine de lignes, aucune dépendance. Il sert les `.js` en
+`text/javascript` — sans ce type MIME exact, le navigateur refuse les modules ES et
+l'écran reste noir. Il refuse aussi tout chemin sortant du dossier du jeu.
+
+Pour jouer depuis un autre appareil du réseau (portable, tablette), lancez une console
+PowerShell **en administrateur** et demandez l'ouverture réseau — `HttpListener` exige
+ce privilège pour écouter ailleurs que sur `localhost` :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File outils\servir.ps1 -Reseau
+```
+
+Le script affiche alors l'adresse à saisir sur l'autre appareil. Windows demandera de
+débloquer le port au pare-feu : acceptez pour les **réseaux privés** seulement.
+
 ### Jouer en ligne, sans rien installer
 
 Le jeu est entièrement statique (aucune dépendance, aucune compilation, tous les
