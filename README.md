@@ -1,5 +1,13 @@
 # Les Aigles — grande stratégie napoléonienne
 
+## ▶ [JOUER MAINTENANT](https://tdamour08-glitch.github.io/Napoleon-jeu/)
+
+### https://tdamour08-glitch.github.io/Napoleon-jeu/
+
+Rien à installer : le jeu s'ouvre dans le navigateur.
+
+---
+
 Jeu de stratégie **temps réel avec pause**, en 2D, sur une carte du monde.
 Aucune dépendance, aucun outil de compilation : du HTML, du CSS et du JavaScript.
 
